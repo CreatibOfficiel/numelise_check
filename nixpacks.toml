@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["python310", "playwright-driver"]
+
+[phases.install]
+cmds = [
+  "pip install -r requirements.txt",
+  "playwright install chromium",
+  "playwright install-deps chromium"
+]
+
+[start]
+cmd = "uvicorn consentcrawl.server:app --host 0.0.0.0 --port $PORT --timeout-keep-alive 120"

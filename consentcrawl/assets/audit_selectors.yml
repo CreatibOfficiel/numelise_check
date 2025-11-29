@@ -1,0 +1,413 @@
+# CMP Audit Selectors Configuration
+# This file contains selector patterns for extracting detailed information from various CMPs
+
+# Settings/Manage buttons by CMP type
+settings_buttons:
+  onetrust:
+    - "#onetrust-pc-btn-handler"
+    - ".ot-sdk-show-settings"
+    - "button.cookie-setting-link"
+
+  didomi:
+    - ".didomi-button-customize"
+    - ".didomi-continue-without-agreeing"
+    - "[aria-label*='Manage' i]"
+    - "[aria-label*='Gérer' i]"
+    - "[aria-label*='Paramétrer' i]"
+
+  cookiebot:
+    - ".CybotCookiebotDialogBodyButton"
+    - "#CybotCookiebotDialogBodyButtonDetails"
+    - "a[id*='CookiebotWidget']"
+
+  axeptio:
+    - ".axeptio-widget button[data-action='settings']"
+    - "button:has-text('Personnaliser')"
+    - ".axeptio_btn_secondary"
+
+  quantcast:
+    - "#qc-cmp2-ui button:has-text('Manage')"
+    - ".qc-cmp2-link"
+    - ".qc-cmp2-button-outline"
+
+  usercentrics:
+    - "[data-testid='uc-more-information-button']"
+    - "#uc-btn-more-info-banner"
+    - "button:has-text('More Information')"
+
+  trustarc:
+    - "#truste-show-consent"
+    - ".pdynamicbutton"
+    - ".required"
+
+  sourcepoint:
+    - "button[title*='Manage']"
+    - "button:has-text('Show Purposes')"
+
+  cookiefirst:
+    - "[data-cookiefirst-action='settings']"
+    - "button:has-text('Settings')"
+
+  osano:
+    - ".osano-cm-link--type_manage"
+    - "button:has-text('Manage preferences')"
+
+  cookieyes:
+    - "[data-cky-tag='detail-button']"
+    - "button:has-text('Customize')"
+
+  generic:
+    - "[aria-label*='settings' i]"
+    - "[aria-label*='manage' i]"
+    - "[aria-label*='paramétrer' i]"
+    - "[aria-label*='gérer' i]"
+    - "[aria-label*='customize' i]"
+    - "button:has-text('Settings')"
+    - "button:has-text('Manage')"
+    - "button:has-text('Customize')"
+    - "button:has-text('Preferences')"
+    - "button:has-text('Paramétrer')"
+    - "button:has-text('Gérer')"
+    - "button:has-text('Personnaliser')"
+    - "a:has-text('Cookie settings')"
+    - "a:has-text('Cookie preferences')"
+
+# Modal detection patterns
+modals:
+  general:
+    - "[role='dialog']"
+    - "[aria-modal='true']"
+    - ".modal.show"
+    - ".modal[style*='display: block']"
+    - ".modal[style*='display:block']"
+
+  onetrust:
+    - "#onetrust-consent-sdk"
+    - "#onetrust-pc-sdk"
+    - ".onetrust-pc-dark-filter"
+
+  didomi:
+    - "#didomi-popup"
+    - ".didomi-popup"
+    - "[class*='didomi-consent']"
+    - ".didomi-consent-popup-preferences"
+    - ".didomi-consent-popup"
+    - ".didomi-screen-medium"
+    - "div[data-didomi='popup']"
+    - "[id*='didomi'][id*='notice']"
+
+  cookiebot:
+    - "#CybotCookiebotDialog"
+    - ".CybotCookiebotDialog"
+
+  axeptio:
+    - "#axeptio_overlay"
+    - ".axeptio_widget"
+    - ".axeptio__modal"                    # Modal itself
+    - ".axeptio-modal"                     # Naming variant
+    - "[id*='axeptio'][class*='modal']"   # Flexible pattern
+    - ".axeptio__step__content"            # Modal content
+    - "[class*='axeptio'][aria-modal='true']"  # ARIA standard
+    - ".axeptio__cookies"                  # Cookies section
+
+  quantcast:
+    - "#qc-cmp2-ui"
+    - ".qc-cmp2-container"
+
+  usercentrics:
+    - "#usercentrics-cmp-ui"
+    - "[data-testid='uc-privacy-settings-dialog']"
+
+  trustarc:
+    - "#truste-consent-track"
+    - "#preference-manager"
+
+  cookieyes:
+    - "#cky-modal"
+    - ".cky-consent-container"
+
+  sourcepoint:
+    - "#notice.message.type-modal"
+    - "div#notice[class*='message']"
+    - ".message.type-modal"
+    - ".message-component[role='dialog']"
+    - "[class*='message-component'][class*='categories']"
+    - "[class*='message-component'][class*='vendors']"
+    - "[aria-label*='preferences']"
+    - "[aria-label*='Manage']"
+    - "div.message-component.categories"
+    - "div[class*='sp_choice']"
+
+# Category patterns by CMP
+categories:
+  onetrust:
+    container: ".ot-cat-grp, #ot-pc-content .ot-cat-lst"
+    item: ".ot-cat-item, .category-item, .ot-cat-grp"
+    name: ".ot-cat-header, .category-header"
+    description: ".ot-cat-desc, .category-description, .ot-grp-desc"
+    toggle: "input[type='checkbox'], .ot-switch input"
+    required_marker: ".ot-always-active, .ot-always-active-group"
+
+  didomi:
+    container: ".didomi-consent-popup-categories, .didomi-components-accordion"
+    item: ".didomi-components-accordion-label-container, .didomi-consent-popup-category"
+    name: ".didomi-components-accordion-label-title, .didomi-consent-popup-category__title"
+    expand_button: ".didomi-components-accordion-label, button[class*='accordion']"
+    description: ".didomi-components-accordion-body, .didomi-consent-popup-category__description"
+    toggle: ".didomi-components-radio, input[type='radio']"
+
+  cookiebot:
+    container: ".CybotCookiebotDialogDetailBodyContent"
+    item: ".CybotCookiebotDialogDetailBodyContentTab"
+    name_in_button: true
+    details_container: ".CybotCookiebotDialogDetailBodyContentTextIABv2"
+    toggle: "input[type='checkbox']"
+
+  quantcast:
+    container: "#qc-cmp2-ui .qc-cmp2-summary-section"
+    item: ".qc-cmp2-summary-section-item"
+    name: ".qc-cmp2-summary-section-name"
+    toggle: "button[mode='toggle']"
+
+  axeptio:
+    container: ".axeptio_widget, .axeptio-widget"
+    item: ".axeptio__cookies__item, [class*='cookie']"
+    name: ".axeptio__cookies__title, strong, [class*='title']"
+    description: ".axeptio__cookies__description, p, [class*='desc']"
+    toggle: "button[role='switch'], input[type='checkbox']"
+
+  usercentrics:
+    container: "[data-testid='uc-category-list']"
+    item: "[data-testid^='uc-category']"
+    name: "[data-testid='uc-category-name']"
+    description: "[data-testid='uc-category-description']"
+    toggle: "input[type='checkbox']"
+
+  trustarc:
+    container: "#preference-manager .type, .pdynamicbutton .type"
+    item: ".prefitem"
+    name: ".title"
+    toggle: "input[type='radio'], input[type='checkbox']"
+
+  sourcepoint:
+    container: ".message-component.categories"
+    item: ".category"
+    name: ".category-name"
+    toggle: "input[type='checkbox']"
+
+  cookiefirst:
+    container: ".cookiefirst-root"
+    item: "[data-cookiefirst-category]"
+    name: ".cookiefirst-category-name"
+    toggle: "input[type='checkbox']"
+
+  osano:
+    container: ".osano-cm-dialog__categories"
+    item: ".osano-cm-category"
+    name: ".osano-cm-category__header"
+    toggle: "input[type='checkbox']"
+
+  cookieyes:
+    container: ".cky-accordion"
+    item: ".cky-accordion-item"
+    name: ".cky-accordion-header-title"
+    description: ".cky-accordion-body"
+    toggle: "input[type='checkbox']"
+
+  generic:
+    container: "[role='group'], fieldset, .category-list, .categories, .cookie-categories"
+    item: ".category, [role='checkbox'], .consent-option, fieldset > div"
+    name: "legend, label, .category-name, .option-label, strong, h3, h4"
+    toggle: "input[type='checkbox'], [role='switch'], .toggle, button[aria-checked]"
+    description: "p, .description, .info, span:not([class])"
+
+# Vendor patterns
+vendors:
+  onetrust:
+    tab_button: "#onetrust-pc-sdk .ot-tab-desc:has-text('Vendor'), button:has-text('IAB Vendors')"
+    vendor_link: ".ot-ven-link, #ot-ven-lst-lnk, button:has-text('vendors')"
+    container: ".ot-ven-lst, #onetrust-pc-sdk .vendor-list, .ot-sdk-eight"
+    item: ".ot-ven-item, .vendor-item"
+    name: ".ot-ven-name, .vendor-title"
+    link: "a.ot-ven-link, .vendor-privacy-notice"
+    purposes: ".ot-ven-purposes, .vendor-purposes"
+    legitimate_interest: ".ot-ven-leg-int"
+
+  didomi:
+    tab_button: "[data-tab='vendors'], button:has-text('Vendors'), button:has-text('Partenaires')"
+    container: ".didomi-components-vendors-list, .didomi-vendor-container"
+    item: ".didomi-vendor, .didomi-components-vendor"
+    name: ".didomi-vendor-name, .didomi-components-vendor-name"
+    purposes: ".didomi-vendor-purposes li, .didomi-consent-popup-data-processing__purposes"
+    privacy_link: ".didomi-vendor-privacy-link, a[href*='privacy']"
+
+  cookiebot:
+    tab_button: "a[href='#CybotCookiebotDialogDetailBodyContentIABv2'], .CybotCookiebotDialogDetailBodyContentTabsItem:has-text('IAB')"
+    container: ".CybotCookiebotDialogDetailBodyContentCookieContainerTypes"
+    item: ".CybotCookiebotDialogDetailBodyContentCookieProviderName"
+    name: "strong, .vendor-name"
+
+  quantcast:
+    container: "#qc-cmp2-ui .qc-cmp2-vendor-list"
+    item: ".qc-cmp2-vendor-list-item"
+    name: ".qc-cmp2-vendor-list-title"
+
+  usercentrics:
+    container: "[data-testid='uc-vendors-list']"
+    item: "[data-testid^='uc-vendor']"
+    name: "[data-testid='uc-vendor-name']"
+    privacy_link: "[data-testid='uc-privacy-button']"
+
+  iab_tcf:
+    container: "[data-vendors-list], .vendors-list, [class*='vendor-list']"
+    item: ".vendor-item, [data-vendor-id], [class*='vendor-row']"
+    name: ".vendor-name, [class*='vendor-title']"
+    purposes_consent: "[data-purposes-consent], .purposes-consent"
+    purposes_legitimate: "[data-purposes-legitimate], .legitimate-interest"
+
+  generic:
+    container: ".vendors, .vendor-list, .partners, [role='list']:has(.vendor)"
+    item: ".vendor, .partner, [role='listitem']"
+    name: ".vendor-name, .partner-name, strong, h4, h5"
+    link: "a[href*='privacy'], a[href*='policy']"
+
+# Cookie detail patterns
+cookies:
+  onetrust:
+    tab_button: "[aria-label*='Cookie' i], button:has-text('Cookie List'), button:has-text('Cookies')"
+    container: ".ot-sdk-cookie-list, #ot-sdk-cookie-policy"
+    item: "tr.ot-sdk-cookie, .ot-cookie-row"
+    name: ".ot-cookie-name, td:nth-child(1)"
+    domain: ".ot-cookie-domain, td:nth-child(2)"
+    duration: ".ot-cookie-duration, td:nth-child(3), .ot-life-span-tag"
+    description: ".ot-cookie-desc, td:nth-child(4), td:nth-child(5)"
+    category: ".ot-cookie-category"
+
+  cookiebot:
+    container: ".CybotCookiebotDialogDetailBodyContentCookieContainer, .CybotCookiebotDialogDetailBodyContentCookieTab"
+    item: ".CybotCookiebotDialogDetailBodyContentCookieContainerTypes"
+    name: ".CybotCookiebotDialogDetailBodyContentCookieContainerName"
+    details: ".CybotCookiebotDialogDetailBodyContentCookieContainerDetail"
+    provider: ".CybotCookiebotDialogDetailBodyContentCookieProviderName"
+
+  didomi:
+    container: ".didomi-consent-popup-data-processing, .didomi-components-cookie-list"
+    item: ".didomi-components-cookie"
+    name: ".didomi-cookie-name"
+
+  quantcast:
+    container: ".qc-cmp2-cookie-list"
+    item: ".qc-cmp2-cookie-row"
+    name: ".qc-cmp2-cookie-name"
+
+  usercentrics:
+    container: "[data-testid='uc-cookie-list']"
+    item: "[data-testid^='uc-cookie']"
+    name: "[data-testid='uc-cookie-name']"
+    description: "[data-testid='uc-cookie-description']"
+
+  generic:
+    container: ".cookies, .cookie-list, .cookie-table, table"
+    item: ".cookie, tr, .cookie-item"
+    name: ".cookie-name, .name, td:first-child"
+    domain: ".cookie-domain, .domain"
+    duration: ".cookie-duration, .duration, .expiry, .lifetime"
+    description: ".cookie-description, .description, .purpose"
+
+# Dangerous buttons to avoid clicking
+dangerous_buttons:
+  text_patterns:
+    - "save"
+    - "confirm"
+    - "accept"
+    - "apply"
+    - "submit"
+    - "enregistrer"
+    - "confirmer"
+    - "accepter"
+    - "valider"
+    - "appliquer"
+    - "speichern"
+    - "bestätigen"
+    - "akzeptieren"
+    - "salvar"
+    - "confermare"
+    - "done"
+    - "terminé"
+
+  selector_patterns:
+    - "[data-action='save']"
+    - "[data-action='confirm']"
+    - "[data-action='accept']"
+    - "[data-action='allow']"
+    - ".save-button"
+    - ".confirm-button"
+    - ".accept-button"
+    - ".allow-button"
+    - "#accept"
+    - "#save"
+    - "#confirm"
+
+# Keywords for text-based detection
+detection_keywords:
+  en:
+    cookies:
+      - "cookie"
+      - "cookies"
+    consent:
+      - "consent"
+      - "privacy"
+      - "tracking"
+      - "data protection"
+      - "your privacy"
+      - "we use cookies"
+    buttons:
+      - "manage"
+      - "settings"
+      - "customize"
+      - "preferences"
+      - "more options"
+      - "learn more"
+
+  fr:
+    cookies:
+      - "cookie"
+      - "cookies"
+      - "témoin"
+      - "témoins"
+    consent:
+      - "consentement"
+      - "confidentialité"
+      - "vie privée"
+      - "suivi"
+      - "données personnelles"
+      - "nous utilisons des cookies"
+    buttons:
+      - "gérer"
+      - "paramétrer"
+      - "personnaliser"
+      - "préférences"
+      - "plus d'options"
+      - "en savoir plus"
+
+# Expandable elements patterns
+expandable:
+  aria:
+    - "[aria-expanded='false']"
+    - "[aria-expanded='0']"
+  role:
+    - "[role='tab']:not([aria-selected='true'])"
+    - "[role='button'][aria-expanded]"
+  classes:
+    - ".collapsed"
+    - ".expand"
+    - ".show-more"
+    - ".accordion-closed"
+  text:
+    - "button:has-text('Show')"
+    - "button:has-text('Details')"
+    - "button:has-text('More')"
+    - "button:has-text('View')"
+    - "button:has-text('Afficher')"
+    - "button:has-text('Détails')"
+    - "button:has-text('Plus')"

@@ -1,0 +1,82 @@
+{
+  "id": "YmJjLmNvbQ==",
+  "url": "https://www.bbc.com",
+  "domain_name": "bbc.com",
+  "extraction_datetime": "2025-11-29T16:46:03.666463",
+  "banner_info": {
+    "detected": true,
+    "cmp_type": "sourcepoint-cmp",
+    "cmp_brand": "Sourcepoint",
+    "banner_html": "<div style=\"font-size: 16px; font-weight: 500; color: rgb(153, 153, 153); font-family: arial, helvetica, sans-serif; display: none;\"><span tabindex=\"0\" class=\"message-stacksclose\">X</span></div><div class=\"message-component message-row body-column\" style=\"padding: 0px; margin: 0px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: auto; height: auto; justify-content: flex-start; align-items: flex-start;\"><div class=\"message-component message-column\" style=\"padding: 0px; margin: 0px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: 100%; height: auto; background: none; align-items: flex-start; justify-content: flex-start;\"><img alt=\"BBC Logo\" src=\"https://gn-web-assets.api.bbc.com/assets/imgs/BBC_Logo_Black_RGB_64px.png\" path=\"[0,0,0,0]\" class=\"message-component message-image no-children logo\" style=\"border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: 200px; height: auto;\"><p tabindex=\"0\" class=\"focusable message-component text no-children header first-focusable-el\" style=\"padding: 5px 0px; margin: 10px 0px 0px; font-size: 22px; font-weight: 600; color: rgb(0, 0, 0); font-family: arial, helvetica, sans-serif; text-align: left; width: auto;\">Let us know you agree to advertising cookies</p><p tabindex=\"0\" class=\"focusable message-component text no-children bodycopy\" style=\"padding: 5px 0px; margin: 5px 0px; font-size: 14px; font-weight: 400; color: rgb(0, 0, 0); font-family: arial, helvetica, sans-serif; text-align: left; width: auto;\">We and our 45 partners use cookies and similar technologies to collect and process personal data from your device, such as your IP address and the pages you visit.<p></p><p><br></p><p>We use this data to help us to better understand our audiences and to improve and personalise your experience.&nbsp;We also use this data to manage the advertising shown on our services.&nbsp;We make money from these ads, which in turn helps to fund our services and the creation of more BBC content.</p><p><br></p><p><strong>Please let us know if you agree to:</strong></p></p><div class=\"message-component message-stacks no-children bodycopy\"><div class=\"stack-container\" style=\"min-height: auto; max-height: 400px;\"><div class=\"stack\"><button tabindex=\"0\" class=\"accordion focusable\" aria-expanded=\"false\" aria-label=\"Store and/or access information on a device\" style=\"padding: 5px 32px 5px 0px; font-size: 14px; font-weight: 600; color: rgb(0, 0, 0); font-family: arial, helvetica, sans-serif;\">Store and/or access information on a device<span class=\"chevron down\"></span></button><div tabindex=\"0\" class=\"panel\" aria-hidden=\"true\" style=\"display: none;\"><p style=\"padding: 5px 10px; font-size: 11px; font-weight: 400; color: rgb(85, 85, 85); font-family: arial, helvetica, sans-serif;\"><div><div>Cookies, device or similar online identifiers (e.g. login-based identifiers, randomly assigned identifiers, network based identifiers) together with other information (e.g. browser type and information, language, screen size, supported technologies etc.) can be stored or read on your device to recognise it each time it connects to an app or to a website, for one or several of the purposes presented here.</div></div><ul class=\"description-bullet\"></ul></p></div></div><div class=\"stack\"><button tabindex=\"0\" class=\"accordion focusable\" aria-expanded=\"false\" aria-label=\"Personalised advertising and content, advertising and content measurement, audience research and services development\n\" style=\"padding: 5px 32px 5px 0px; font-size: 14px; font-weight: 600; color: rgb(0, 0, 0); font-family: arial, helvetica, sans-serif;\">Personalised advertising and content, advertising and content measurement, audience research and services development\n<span class=\"chevron down\"></span></button><div tabindex=\"0\" class=\"panel\" aria-hidden=\"true\" style=\"display: none;\"><p style=\"padding: 5px 10px; font-size: 11px; font-weight: 400; color: rgb(85, 85, 85); font-family: arial, helvetica, sans-serif;\"><div><div>Advertising and content can be personalised based on your profile. Your activity on this service can be used to build or improve a profile about you for personalised advertising and content. Advertising and content performance can be measured. Reports can be generated based on your activity and those of others. Your activity on this service can help develop and improve products and services.</div></div><ul class=\"description-bullet\"></ul></p></div></div></div></div><p tabindex=\"0\" class=\"focusable message-component text no-children bodycopy\" style=\"padding: 10px 0px; margin: 0px; font-size: 14px; font-weight: 400; color: rgb(0, 0, 0); font-family: arial, helvetica, sans-serif; text-align: left; width: auto;\">Click “Manage Options” to set your choice for specific purposes and to view the list of our <a data-choice=\"1750748549405\" target=\"_blank\" href=\"#\" style=\"color:#000;text-decoration:underline;font-weight: 400;\" class=\"text-link-0-0-0-4  focusable\" aria-label=\"partners\">partners</a>. You can find out more on advertising cookies in our <a target=\"_blank\" href=\"https://www.bbc.com/pages/privacy-policy\" style=\"color:#000;text-decoration:underline;font-weight: 400;\" class=\"text-link-0-0-0-4  focusable\" aria-label=\"privacy policy\">privacy policy</a>. To change your preferences at any other time (including to withdraw consent or opt out of legitimate interest processing) by clicking on <strong>‘Do not share or sell my info‘ </strong>at the bottom of any page. Your choice only applies to BBC.com.</p></div></div><div class=\"message-component message-row unstack\" style=\"padding: 10px 0px 0px; margin: 0px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: calc(100% + 0px); height: auto; justify-content: center; align-items: center;\"><div class=\"message-component message-column button-column\" style=\"padding: 10px; margin: 0px 0px 10px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: 232px; height: auto; background: none; align-items: center; justify-content: center;\"><button title=\"I do not agree\" aria-label=\"I do not agree\" class=\"message-component message-button no-children focusable button sp_choice_type_13\" style=\"opacity: 1; padding: 14px 15px; margin: 10px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; font-size: 14px; font-weight: 600; color: rgb(255, 255, 255); font-family: arial, helvetica, sans-serif; background: rgb(0, 0, 0); width: 230px;\">I do not agree</button></div><div class=\"message-component message-column button-column\" style=\"padding: 9px 10px 10px; margin: 0px 0px 10px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: 232px; height: auto; background: none; align-items: flex-start; justify-content: center;\"><button title=\"I agree\" aria-label=\"I agree\" class=\"message-component message-button no-children focusable button sp_choice_type_11\" style=\"opacity: 1; padding: 14px 15px; margin: 10px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; font-size: 14px; font-weight: 600; color: rgb(255, 255, 255); font-family: arial, helvetica, sans-serif; background: rgb(0, 0, 0); width: 230px;\">I agree</button></div></div><div class=\"message-component message-row mobile-reverse\" style=\"padding: 0px 0px 8px; margin: 0px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: auto; height: 44px; justify-content: center; align-items: flex-start;\"><div class=\"message-component message-column\" style=\"padding: 0px; margin: 0px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: auto; height: auto; background: none; align-items: center; justify-content: center;\"><button title=\"Manage options\" aria-label=\"Manage options\" class=\"message-component message-button no-children focusable manage_options  sp_choice_type_12 last-focusable-el\" style=\"opacity: 1; padding: 12px 15px; margin: 20px 10px 0px; border-width: 1px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; font-size: 14px; font-weight: 600; color: rgb(50, 50, 50); font-family: arial, helvetica, sans-serif; background: rgb(255, 255, 255); width: auto;\">Manage options</button></div><div class=\"message-component message-column\" style=\"padding: 0px; margin: 0px; border-width: 0px; border-color: rgb(0, 0, 0); border-radius: 0px; border-style: solid; width: auto; height: auto; background: none; align-items: center; justify-content: flex-start;\"></div></div>",
+    "banner_text": "Let us know you agree to advertising cookies\n\nWe and our 45 partners use cookies and similar technologies to collect and process personal data from your device, such as your IP address and the pages you visit.\n\n\n\n\nWe use this data to help us to better understand our audiences and to improve and personalise your experience. We also use this data to manage the advertising shown on our services. We make money from these ads, which in turn helps to fund our services and the creation of more BBC content.\n\n\n\n\nPlease let us know if you agree to:\n\nStore and/or access information on a device\nPersonalised advertising and content, advertising and content measurement, audience research and services development\n\nClick “Manage Options” to set your choice for specific purposes and to view the list of our partners. You can find out more on advertising cookies in our privacy policy. To change your preferences at any other time (including to withdraw consent or opt out of legitimate interest processing) by clicking on ‘Do not share or sell my info‘ at the bottom of any page. Your choice only applies to BBC.com.\n\nI do not agree\nI agree\nManage options",
+    "buttons": [
+      {
+        "text": "store and/or access information on a device",
+        "role": "unknown",
+        "selector": "[aria-label='Store and/or access information on a device']",
+        "aria_label": "Store and/or access information on a device",
+        "is_visible": true
+      },
+      {
+        "text": "personalised advertising and content, advertising and content measurement, audience research and services development",
+        "role": "unknown",
+        "selector": ".accordion",
+        "aria_label": "Personalised advertising and content, advertising and content measurement, audience research and services development\n",
+        "is_visible": true
+      },
+      {
+        "text": "partners",
+        "role": "unknown",
+        "selector": "[aria-label='partners']",
+        "aria_label": "partners",
+        "is_visible": true
+      },
+      {
+        "text": "privacy policy",
+        "role": "info",
+        "selector": "[aria-label='privacy policy']",
+        "aria_label": "privacy policy",
+        "is_visible": true
+      },
+      {
+        "text": "i do not agree",
+        "role": "accept_all",
+        "selector": ".sp_choice_type_13",
+        "aria_label": "I do not agree",
+        "is_visible": true
+      },
+      {
+        "text": "i agree",
+        "role": "accept_all",
+        "selector": ".sp_choice_type_11",
+        "aria_label": "I agree",
+        "is_visible": true
+      },
+      {
+        "text": "manage options",
+        "role": "settings",
+        "selector": ".sp_choice_type_12",
+        "aria_label": "Manage options",
+        "is_visible": true
+      }
+    ],
+    "in_iframe": true,
+    "in_shadow_dom": false,
+    "iframe_src": "https://cdn.privacy-mgmt.com/index.html?hasCsp=true&message_id=1355822&consentUUID=null&consent_origin=https%3A%2F%2Fcdn.privacy-mgmt.com%2Fconsent%2Ftcfv2&preload_message=true&version=v1",
+    "detection_method": "cmp_specific"
+  },
+  "categories": [],
+  "vendors": [],
+  "cookies": [],
+  "ui_context": {
+    "current_depth": 0,
+    "visited_selectors": [],
+    "modal_stack": [],
+    "errors": [
+      "Detailed extraction skipped: Modal navigation failed"
+    ]
+  },
+  "screenshot_files": [],
+  "status": "success_basic",
+  "status_msg": "Banner extracted successfully"
+}

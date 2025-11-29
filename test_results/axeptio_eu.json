@@ -1,0 +1,85 @@
+{
+  "id": "YXhlcHRpby5ldQ==",
+  "url": "https://www.axeptio.eu",
+  "domain_name": "axeptio.eu",
+  "extraction_datetime": "2025-11-29T16:42:44.093744",
+  "banner_info": {
+    "detected": true,
+    "cmp_type": "axeptio",
+    "cmp_brand": "Axceptio",
+    "banner_html": "<div class=\"sc-fxNMLY kCfwVF\"><div class=\"sc-bGqPaL bzEXh\"><button id=\"axeptio_btn_dismiss\" aria-label=\"Close without accepting cookies\" class=\"sc-gYhhMS zNPwH\"><div class=\"sc-kHNMIv LfdHN\" style=\"left: -2.92138px; top: -49.9214px; width: 139.843px;\"><span class=\"sc-dkaWRx kCRIXS\"></span></div><span class=\"sc-ksXiFW bnMTqI\">No, thanks</span></button><button id=\"axeptio_btn_configure\" aria-label=\"I choose the cookies to configure\" class=\"sc-gYhhMS zNPwH\"><div class=\"sc-kHNMIv LfdHN\" style=\"left: -2.92138px; top: -49.9214px; width: 139.843px;\"><span class=\"sc-dkaWRx kCRIXS\"></span></div><span class=\"sc-ksXiFW bnMTqI\">Let me choose</span></button><button id=\"axeptio_btn_acceptAll\" aria-label=\"Accept all cookies\" class=\"sc-gYhhMS ePCZNz\"><div class=\"sc-kHNMIv LfdHN\" style=\"left: -2.92138px; top: -49.9214px; width: 139.843px;\"><span class=\"sc-dkaWRx kCRIXS\"></span></div><span class=\"sc-ksXiFW bnMTqI\">Ok for me</span></button></div></div>",
+    "banner_text": "No, thanks\nLet me choose\nOk for me",
+    "buttons": [
+      {
+        "text": "no, thanks",
+        "role": "accept_all",
+        "selector": "#axeptio_btn_dismiss",
+        "aria_label": "Close without accepting cookies",
+        "is_visible": true
+      },
+      {
+        "text": "let me choose",
+        "role": "settings",
+        "selector": "#axeptio_btn_configure",
+        "aria_label": "I choose the cookies to configure",
+        "is_visible": true
+      },
+      {
+        "text": "ok for me",
+        "role": "accept_all",
+        "selector": "#axeptio_btn_acceptAll",
+        "aria_label": "Accept all cookies",
+        "is_visible": true
+      }
+    ],
+    "in_iframe": false,
+    "in_shadow_dom": false,
+    "iframe_src": null,
+    "detection_method": "cmp_specific"
+  },
+  "categories": [
+    {
+      "name": "Hubspot",
+      "description": null,
+      "default_enabled": false,
+      "is_required": false,
+      "has_toggle": true,
+      "purposes": []
+    },
+    {
+      "name": "Piano Analytics",
+      "description": null,
+      "default_enabled": false,
+      "is_required": false,
+      "has_toggle": true,
+      "purposes": []
+    },
+    {
+      "name": "Intercom",
+      "description": null,
+      "default_enabled": false,
+      "is_required": false,
+      "has_toggle": true,
+      "purposes": []
+    },
+    {
+      "name": "Hotjar",
+      "description": null,
+      "default_enabled": false,
+      "is_required": false,
+      "has_toggle": true,
+      "purposes": []
+    }
+  ],
+  "vendors": [],
+  "cookies": [],
+  "ui_context": {
+    "current_depth": 0,
+    "visited_selectors": [],
+    "modal_stack": [],
+    "errors": []
+  },
+  "screenshot_files": [],
+  "status": "success_detailed",
+  "status_msg": "Full detailed extraction completed"
+}
