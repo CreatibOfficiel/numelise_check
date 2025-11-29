@@ -335,10 +335,10 @@ playwright install chromium
 
 ```bash
 # Start server with auto-reload
-uvicorn consentcrawl.server:app --reload
+uvicorn consentcrawl.api:app --reload
 
 # Or run directly
-python -m consentcrawl.server
+python -m consentcrawl.api
 ```
 
 Server will start at `http://localhost:8000`

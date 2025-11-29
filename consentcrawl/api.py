@@ -291,3 +291,19 @@ async def not_found_handler(request: Request, exc):
         "message": f"The endpoint {request.url.path} does not exist",
         "available_endpoints": ["/", "/health", "/audit", "/docs"]
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    
+    port = int(os.getenv("PORT", 8000))
+    logging.info(f"Starting ConsentCrawl API server on port {port}...")
+    
+    uvicorn.run(
+        "consentcrawl.api:app",
+        host="0.0.0.0",
+        port=port,
+        log_level="info",
+        access_log=True
+    )
