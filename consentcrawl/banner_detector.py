@@ -554,6 +554,20 @@ async def extract_all_text_from_banner(banner_locator: Locator) -> str:
         return ""
 
 
+def clean_text(text: Optional[str]) -> str:
+    """Clean text by removing HTML tags and normalizing whitespace."""
+    if not text:
+        return ""
+    import re
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', ' ', text)
+    # Remove CSS styles in text (rare but happens)
+    text = re.sub(r'{[^}]+}', '', text)
+    # Normalize whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+
 async def extract_banner_info_safe(banner_locator: Locator, cmp_info: Optional[dict], detection_method: str) -> Optional[BannerInfo]:
     """
     Version améliorée avec extraction maximale du texte visible.
@@ -591,18 +605,6 @@ async def extract_banner_info_safe(banner_locator: Locator, cmp_info: Optional[d
         if len(buttons) == 0 and len(banner_text.strip()) < 20:
             logging.debug("Banner extraction failed validation (no buttons, minimal text)")
             return None
-
-        # Clean text by removing HTML tags and normalizing whitespace
-        import re
-        def clean_text(text):
-            if not text: return ""
-            # Remove HTML tags
-            text = re.sub(r'<[^>]+>', ' ', text)
-            # Remove CSS styles in text (rare but happens)
-            text = re.sub(r'{[^}]+}', '', text)
-            # Normalize whitespace
-            text = re.sub(r'\s+', ' ', text).strip()
-            return text
 
         banner_info = BannerInfo(
             detected=True,

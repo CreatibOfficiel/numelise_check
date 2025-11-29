@@ -16,8 +16,8 @@ from enum import Enum
 class AuditConfig:
     """Configuration for audit mode behavior."""
     max_ui_depth: int = 3
-    timeout_banner: int = 10000  # milliseconds
-    timeout_modal: int = 15000   # milliseconds
+    timeout_banner: int = 5000   # milliseconds (was 10000)
+    timeout_modal: int = 8000    # milliseconds (was 15000)
     timeout_click: int = 5000    # milliseconds
     languages: List[str] = field(default_factory=lambda: ['en', 'fr'])
     support_shadow_dom: bool = True

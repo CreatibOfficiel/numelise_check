@@ -78,11 +78,11 @@ class AuditResponse(BaseModel):
     url: str
     domain_name: str
     extraction_datetime: str
-    banner_info: dict
+    banner_info: Optional[dict] = None
     categories: list
     vendors: list
     cookies: list
-    ui_context: dict
+    ui_context: Optional[dict] = None
     screenshot_files: list
     status: str
     status_msg: str
