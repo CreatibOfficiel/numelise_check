@@ -11,20 +11,25 @@ This module orchestrates the complete audit pipeline:
 Mirrors the structure of crawl.py but for audit mode.
 """
 
-import os
+# Standard library imports
+import asyncio
+import base64
+import datetime
 import json
 import logging
-import datetime
-import base64
+import os
 import re
 import sqlite3
-import asyncio
+import time
 from pathlib import Path
+
+# Third-party imports
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
-from consentcrawl import utils
+# Local imports
 from consentcrawl.audit_schemas import AuditResult, AuditConfig, ConsentUIContext
 from consentcrawl.banner_detector import detect_banner
+from consentcrawl.blocklists import Blocklists
 from consentcrawl.ui_explorer import explore_consent_ui
 from consentcrawl.utils import get_consent_managers
 
@@ -60,17 +65,22 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         status="pending",
     )
 
+    import time
+    start_time = time.time()
+    
     try:
         # Create browser context with random user agent
         context = await browser.new_context(
             user_agent=DEFAULT_UA_STRINGS[0],
             viewport={"width": 1366, "height": 768},
         )
+        logging.debug(f"Context created: {time.time() - start_time:.2f}s")
 
         # Bypass webdriver detection
         await context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
         page = await context.new_page()
+        logging.debug(f"Page created: {time.time() - start_time:.2f}s")
 
         # Capture network requests
         captured_requests = []
@@ -85,11 +95,19 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         logging.info(f"Auditing: {url}")
         try:
             # wait_until="domcontentloaded" is much faster than "load"
-            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            # Reduced timeout to 15s to fail fast on slow sites (like BBC)
+            # Often the banner is already there even if the page isn't fully loaded
+            t0 = time.time()
+            await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            logging.debug(f"Page loaded: {time.time() - t0:.2f}s")
         except PlaywrightTimeoutError:
-            logging.warning(f"Page load timeout for {url}")
+            logging.warning(f"Page load timeout (15s) for {url} - proceeding anyway to check for banner")
+            # Do NOT return error, continue to see if banner is visible
+            pass
+        except Exception as e:
+            logging.warning(f"Page load error for {url}: {e}")
             audit_result.status = "error"
-            audit_result.status_msg = "Page load timeout"
+            audit_result.status_msg = f"Page load error: {str(e)}"
             await context.close()
             return audit_result
 
@@ -107,20 +125,13 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         cmp_configs = get_consent_managers()
 
         # Detect banner
-        logging.debug("Detecting banner...")
+        logging.debug(f"Starting banner detection: {time.time() - start_time:.2f}s")
+        t0 = time.time()
         banner_info = await detect_banner(page, cmp_configs, config)
-
-        if not banner_info or not banner_info.detected:
-            logging.info(f"No banner detected on {url}")
+        logging.debug(f"Banner detection finished: {time.time() - t0:.2f}s")
+        
+        if banner_info:
             audit_result.banner_info = banner_info
-            audit_result.status = "failed"
-            audit_result.status_msg = "No banner detected"
-            await context.close()
-            return audit_result
-
-        logging.info(f"Banner detected: {banner_info.cmp_type or 'unknown CMP'}")
-        audit_result.banner_info = banner_info
-
         # Take screenshot if requested
         if screenshot:
             screenshot_dir = "screenshots"
@@ -183,42 +194,12 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         else:
             logging.debug("No settings button found, skipping detailed extraction")
 
-        # Process captured requests
-        try:
-            # Filter third-party requests
-            third_party_requests = [
-                req_url for req_url in captured_requests 
-                if domain_name not in req_url
-            ]
-            
-            # Extract domains
-            third_party_domains = set()
-            for req_url in third_party_requests:
-                match = re.search(r"https?://(?:www\.)?([^/]+)", req_url)
-                if match:
-                    third_party_domains.add(match.group(1))
-            
-            audit_result.third_party_domains = list(third_party_domains)
-            
-            # Identify tracking domains
-            audit_result.tracking_domains = [
-                d for d in third_party_domains 
-                if any(tracker in d for tracker in TRACKING_DOMAINS)
-            ]
-            # Note: The original logic checked if "tracker in d". 
-            # If TRACKING_DOMAINS contains "google-analytics.com", and d is "www.google-analytics.com", it matches.
-            # But if TRACKING_DOMAINS contains "google-analytics", it matches too.
-            # Blocklists usually have "||example.com^". The parser in blocklists.py cleans this up.
-            # Let's assume TRACKING_DOMAINS contains clean domains.
-            
-            # Better matching logic: check if d ends with any tracking domain
-            # Or exact match if blocklist is precise.
-            # For now, simple inclusion is safer.
-            
-            logging.info(f"Found {len(audit_result.third_party_domains)} third-party domains and {len(audit_result.tracking_domains)} trackers")
-
-        except Exception as e:
-            logging.warning(f"Failed to process network requests: {e}")
+        # Process captured requests using utility function
+        from consentcrawl.utils import process_network_requests
+        
+        audit_result.third_party_domains, audit_result.tracking_domains = process_network_requests(
+            captured_requests, domain_name, TRACKING_DOMAINS
+        )
 
         # Extract actual cookies from browser context
         try:

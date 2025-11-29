@@ -300,7 +300,8 @@ class SectionDiscoverer:
         """
         Execute complete section discovery pipeline.
 
-        Runs all 3 tiers, merges results, activates sections, and validates content.
+        Runs all 4 tiers (CMP-specific + 3 generic tiers), merges results, 
+        activates sections, and validates content.
 
         Returns:
             SectionDiscoveryResult with discovered sections
@@ -309,9 +310,23 @@ class SectionDiscoverer:
         result = SectionDiscoveryResult(sections=[])
 
         try:
-            logging.info("[SectionDiscovery] Starting 3-tier discovery")
+            logging.info("[SectionDiscovery] Starting 4-tier discovery (CMP-specific + generic)")
 
-            # Step 1: Run all 3 discovery tiers in parallel
+            # Tier 0: CMP-specific discovery (NEW - highest priority)
+            tier0_sections = []
+            if self.cmp_type:
+                try:
+                    from consentcrawl.cmp_section_discovery import discover_cmp_specific_sections
+                    tier0_sections = await discover_cmp_specific_sections(
+                        self.modal_locator,
+                        self.page,
+                        self.cmp_type
+                    )
+                    logging.info(f"[Tier0-CMP] Found {len(tier0_sections)} CMP-specific sections")
+                except Exception as e:
+                    logging.warning(f"[Tier0-CMP] CMP-specific discovery failed: {e}")
+
+            # Step 1: Run all 3 generic discovery tiers in parallel
             tier1_task = asyncio.create_task(self.discover_tier1_aria())
             tier2_task = asyncio.create_task(self.discover_tier2_visual())
             tier3_task = asyncio.create_task(self.discover_tier3_yaml())
@@ -324,8 +339,10 @@ class SectionDiscoverer:
             logging.info(f"[Tier2-Visual] Found {len(tier2_sections)} sections")
             logging.info(f"[Tier3-YAML] Found {len(tier3_sections)} sections")
 
-            # Step 2: Merge and deduplicate
-            merged_sections = await self.merge_discoveries(tier1_sections, tier2_sections, tier3_sections)
+            # Step 2: Merge and deduplicate (CMP-specific has highest priority)
+            # Merge order: Tier0 (CMP) > Tier1 (ARIA) > Tier2 (Visual) > Tier3 (YAML)
+            all_sections = tier0_sections + tier1_sections + tier2_sections + tier3_sections
+            merged_sections = await self.merge_discoveries(tier0_sections, tier1_sections + tier2_sections, tier3_sections)
             logging.info(f"[Merge] After deduplication: {len(merged_sections)} unique sections")
 
         # Step 3: Activate and validate each section (Smart Strategy)

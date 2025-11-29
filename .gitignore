@@ -5,6 +5,9 @@ consentcrawl/data/*/**
 
 *.db
 
+# Test response files
+response_*.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

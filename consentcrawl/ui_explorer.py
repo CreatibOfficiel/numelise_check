@@ -191,10 +191,10 @@ async def open_settings_modal(page: Page, banner_info: BannerInfo, config: Audit
         return None
 
     # 3. Attendre animation UI
-    await page.wait_for_timeout(1500)
+    await page.wait_for_timeout(500)
 
-    # 4. Détecter la modal avec retry
-    modal_locator = await detect_modal_with_retry(page, banner_info.cmp_type, config, max_retries=3)
+    # 4. Détecter la modal avec retry (optimized to 2 for balance)
+    modal_locator = await detect_modal_with_retry(page, banner_info.cmp_type, config, max_retries=2)
 
     if not modal_locator:
         logging.warning("Settings modal not detected after click")
@@ -202,30 +202,84 @@ async def open_settings_modal(page: Page, banner_info: BannerInfo, config: Audit
     return modal_locator
 
 
-async def detect_modal_with_retry(page: Page, cmp_type: Optional[str], config: AuditConfig, max_retries: int = 3) -> Optional[Locator]:
+async def detect_modal_with_retry(page: Page, cmp_type: Optional[str], config: AuditConfig, max_retries=2) -> Optional[Locator]:
     """
-    Détecte la modal avec retry et logging détaillé.
-
+    Détecte la modal de settings avec retry et stratégies multiples.
+    
+    Enhanced with:
+    - CMP-specific detection (Sourcepoint, OneTrust, Didomi)
+    - Multi-frame search (all iframes)
+    - Fallback to generic detection
+    
     Args:
         page: Playwright Page object
         cmp_type: CMP type if known
         config: Audit configuration
-        max_retries: Nombre maximum de tentatives
-
+        max_retries: Maximum retry attempts
+        
     Returns:
         Locator for the modal, or None
     """
+    from consentcrawl.cmp_detectors import (
+        detect_sourcepoint_modal,
+        detect_onetrust_modal,
+        detect_didomi_modal,
+        detect_modal_in_all_frames
+    )
+    
     for attempt in range(max_retries):
         try:
+            logging.debug(f"[ModalDetection] Attempt {attempt+1}/{max_retries}")
+            
+            # Strategy 1: CMP-specific detection (highest precision)
+            if cmp_type:
+                normalized_cmp = cmp_type.replace("-cmp", "").replace("_", "-").lower()
+                
+                if "sourcepoint" in normalized_cmp:
+                    logging.debug("Trying Sourcepoint-specific detection")
+                    modal = await detect_sourcepoint_modal(page)
+                    if modal:
+                        logging.info("✓ Modal found via Sourcepoint detector")
+                        return modal
+                
+                elif "onetrust" in normalized_cmp:
+                    logging.debug("Trying OneTrust-specific detection")
+                    modal = await detect_onetrust_modal(page)
+                    if modal:
+                        logging.info("✓ Modal found via OneTrust detector")
+                        return modal
+                
+                elif "didomi" in normalized_cmp:
+                    logging.debug("Trying Didomi-specific detection")
+                    modal = await detect_didomi_modal(page)
+                    if modal:
+                        logging.info("✓ Modal found via Didomi detector")
+                        return modal
+            
+            # Strategy 2: Generic detection (original logic)
+            logging.debug("Trying generic detection")
             modal = await detect_modal(page, cmp_type, config)
             if modal:
+                logging.info("✓ Modal found via generic detector")
                 return modal
+            
+            # Strategy 3: Search all frames (fallback)
+            if len(page.frames) > 1:
+                logging.debug(f"Trying all-frames search ({len(page.frames)} frames)")
+                modal = await detect_modal_in_all_frames(page, cmp_type, detect_modal)
+                if modal:
+                    logging.info("✓ Modal found via all-frames search")
+                    return modal
+            
+            logging.warning(f"[ModalDetection] ✗ No modal found on attempt {attempt+1}/{max_retries}")
+            
         except Exception as e:
             logging.debug(f"Modal detection attempt {attempt+1} failed: {e}")
 
         if attempt < max_retries - 1:
-            await page.wait_for_timeout(2000)  # Wait for CSS animations (increased from 1000ms)
+            await page.wait_for_timeout(500)  # Wait for CSS animations
 
+    logging.warning(f"[ModalDetection] ✗✗ Modal detection failed after {max_retries} attempts")
     return None
 
 
@@ -279,7 +333,9 @@ async def detect_modal(page: Page, cmp_type: Optional[str], config: AuditConfig)
                 for selector in cmp_selectors:
                     try:
                         locator = page_context.locator(selector).first
-                        if await locator.is_visible(timeout=1000):
+                        # Aggressive timeout optimization: 100ms per selector
+                        # We rely on the retry loop in detect_modal_with_retry for waiting
+                        if await locator.is_visible(timeout=100):
                             logging.info(f"✓ Modal detected with CMP selector in {context_name}: {selector}")
                             return locator
                     except:
@@ -296,7 +352,7 @@ async def detect_modal(page: Page, cmp_type: Optional[str], config: AuditConfig)
         for selector in generic_selectors:
             try:
                 locator = page_context.locator(selector).first
-                if await locator.is_visible(timeout=500):
+                if await locator.is_visible(timeout=100):
                     # Vérifier que c'est bien une modal (mots-clés)
                     text = await locator.inner_text(timeout=1000)
                     keywords = ["cookie", "consent", "preference", "vendor", "purpose", "category"]
