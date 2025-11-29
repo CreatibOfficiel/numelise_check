@@ -592,12 +592,24 @@ async def extract_banner_info_safe(banner_locator: Locator, cmp_info: Optional[d
             logging.debug("Banner extraction failed validation (no buttons, minimal text)")
             return None
 
+        # Clean text by removing HTML tags and normalizing whitespace
+        import re
+        def clean_text(text):
+            if not text: return ""
+            # Remove HTML tags
+            text = re.sub(r'<[^>]+>', ' ', text)
+            # Remove CSS styles in text (rare but happens)
+            text = re.sub(r'{[^}]+}', '', text)
+            # Normalize whitespace
+            text = re.sub(r'\s+', ' ', text).strip()
+            return text
+
         banner_info = BannerInfo(
             detected=True,
             cmp_type=cmp_info.get("id") if cmp_info else None,
             cmp_brand=cmp_info.get("brand") if cmp_info else None,
             banner_html=banner_html[:20000],  # Augmenté à 20k
-            banner_text=banner_text[:10000],  # Augmenté à 10k
+            banner_text=clean_text(banner_text),
             buttons=buttons,
             detection_method=detection_method,
         )
@@ -666,7 +678,7 @@ async def extract_banner_info(banner_locator: Locator, cmp_info: Optional[dict],
         cmp_type=cmp_info.get("id") if cmp_info else None,
         cmp_brand=cmp_info.get("brand") if cmp_info else None,
         banner_html=banner_html[:10000] if banner_html else "",
-        banner_text=banner_text[:5000] if banner_text else "",
+        banner_text=clean_text(banner_text[:10000]) if banner_text else "",
         buttons=buttons,
         detection_method=detection_method,
     )
