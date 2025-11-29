@@ -21,3 +21,16 @@ def string_to_boolean(v):
         return False
     else:
         raise argparse.ArgumentTypeError("Boolean value expected.")
+
+
+import os
+import yaml
+
+MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
+CONSENT_MANAGERS_FILE = f"{MODULE_DIR}/assets/consent_managers.yml"
+
+
+def get_consent_managers():
+    with open(CONSENT_MANAGERS_FILE, "r") as f:
+        data = yaml.safe_load(f)
+        return data

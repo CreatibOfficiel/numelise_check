@@ -15,7 +15,7 @@ from enum import Enum
 @dataclass
 class AuditConfig:
     """Configuration for audit mode behavior."""
-    max_ui_depth: int = 3
+    max_ui_depth: int = 3    # Reverted to 3 for detailed extraction
     timeout_banner: int = 5000   # milliseconds (was 10000)
     timeout_modal: int = 8000    # milliseconds (was 15000)
     timeout_click: int = 5000    # milliseconds
@@ -73,7 +73,6 @@ class BannerInfo:
             'detected': self.detected,
             'cmp_type': self.cmp_type,
             'cmp_brand': self.cmp_brand,
-            'banner_html': self.banner_html,
             'banner_text': self.banner_text,
             'buttons': [b.to_dict() for b in self.buttons],
             'in_iframe': self.in_iframe,
@@ -257,7 +256,10 @@ class AuditResult:
     banner_info: Optional[BannerInfo] = None
     categories: List[CategoryInfo] = field(default_factory=list)
     vendors: List[VendorInfo] = field(default_factory=list)
-    cookies: List[CookieDetail] = field(default_factory=list)
+    cookies: List[CookieDetail] = field(default_factory=list)  # Declared in UI
+    actual_cookies: List[Dict[str, Any]] = field(default_factory=list)  # Actually set in browser
+    tracking_domains: List[str] = field(default_factory=list)  # Detected network trackers
+    third_party_domains: List[str] = field(default_factory=list)  # All third-party requests
     ui_context: Optional[ConsentUIContext] = None
     screenshot_files: List[str] = field(default_factory=list)
     # Status granularity:
@@ -278,6 +280,9 @@ class AuditResult:
             'categories': [c.to_dict() for c in self.categories],
             'vendors': [v.to_dict() for v in self.vendors],
             'cookies': [c.to_dict() for c in self.cookies],
+            'actual_cookies': self.actual_cookies,
+            'tracking_domains': self.tracking_domains,
+            'third_party_domains': self.third_party_domains,
             'ui_context': self.ui_context.to_dict() if self.ui_context else None,
             'screenshot_files': self.screenshot_files,
             'status': self.status,
@@ -300,6 +305,9 @@ def get_audit_schema() -> Dict[str, str]:
         "categories": "TEXT",    # JSON array
         "vendors": "TEXT",       # JSON array
         "cookies": "TEXT",       # JSON array
+        "actual_cookies": "TEXT", # JSON array
+        "tracking_domains": "TEXT", # JSON array
+        "third_party_domains": "TEXT", # JSON array
         "ui_context": "TEXT",    # JSON
         "screenshot_files": "TEXT",  # JSON array
         "status": "STRING",

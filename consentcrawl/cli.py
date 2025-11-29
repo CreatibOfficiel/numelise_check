@@ -4,31 +4,7 @@ import json
 import logging
 import argparse
 import sys
-from consentcrawl import crawl, utils, blocklists, audit_crawl, audit_schemas
-
-
-async def process_urls(
-    urls,
-    batch_size,
-    tracking_domains_list,
-    headless=True,
-    screenshot=True,
-    results_db_file="crawl_results.db",
-):
-    """
-    Start the Playwright browser, run the URLs to test in batches asynchronously
-    and write the data to a file.
-    """
-
-    return await crawl.crawl_batch(
-        urls=urls,
-        batch_size=batch_size,
-        results_function=crawl.store_crawl_results,
-        tracking_domains_list=tracking_domains_list,
-        browser_config={"headless": headless, "channel": "msedge"},
-        results_db_file=results_db_file,
-        screenshot=screenshot,
-    )
+from consentcrawl import utils, blocklists, audit_crawl, audit_schemas
 
 
 def cli():
@@ -181,26 +157,7 @@ def cli():
             sys.stdout.write(json.dumps(results, indent=2))
 
     else:
-        # Crawl mode (legacy behavior)
-        # Bootstrap blocklists
-        blockers = blocklists.Blocklists(
-            db_file=args.db_file,
-            source_file=args.blocklists,
-            force_bootstrap=args.bootstrap,
-        )
-
-        results = asyncio.run(
-            process_urls(
-                urls=urls,
-                batch_size=args.batch_size,
-                tracking_domains_list=blockers.get_domains(),
-                headless=args.headless,
-                screenshot=args.screenshot,
-                results_db_file=args.db_file,
-            )
-        )
-
-        if args.show_output and len(results) < 25:
-            sys.stdout.write(json.dumps(results, indent=2))
+        logging.error("Only 'audit' mode is supported in this version.")
+        sys.exit(1)
 
     sys.exit(0)

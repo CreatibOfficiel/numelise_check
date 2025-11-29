@@ -82,6 +82,9 @@ class AuditResponse(BaseModel):
     categories: list
     vendors: list
     cookies: list
+    actual_cookies: list
+    tracking_domains: list
+    third_party_domains: list
     ui_context: Optional[dict] = None
     screenshot_files: list
     status: str

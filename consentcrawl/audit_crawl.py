@@ -26,37 +26,27 @@ from consentcrawl import utils
 from consentcrawl.audit_schemas import AuditResult, AuditConfig, ConsentUIContext
 from consentcrawl.banner_detector import detect_banner
 from consentcrawl.ui_explorer import explore_consent_ui
-from consentcrawl.crawl import get_consent_managers
+from consentcrawl.utils import get_consent_managers
 
 
 DEFAULT_UA_STRINGS = [
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36 Edg/116.0.1938.81"
 ]
 
+from consentcrawl.blocklists import Blocklists
+
+# Initialize blocklists (singleton-like)
+try:
+    BLOCKLISTS = Blocklists()
+    TRACKING_DOMAINS = set(BLOCKLISTS.get_domains())
+except Exception as e:
+    logging.warning(f"Failed to initialize blocklists: {e}")
+    TRACKING_DOMAINS = set()
+
 
 async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = False) -> AuditResult:
     """
     Complete audit pipeline for a single URL.
-
-    Steps:
-    1. Create browser context
-    2. Navigate to URL
-    3. Wait for page load + banner timeout
-    4. Detect banner
-    5. Extract banner info
-    6. If settings button found, explore UI
-    7. Take screenshots if requested
-    8. Build AuditResult
-    9. Return result (never crash, always return)
-
-    Args:
-        url: URL to audit
-        browser: Playwright Browser instance
-        config: Audit configuration
-        screenshot: Whether to capture screenshots
-
-    Returns:
-        AuditResult object with all extracted data
     """
     # Create audit result with default values
     domain_name = re.search(r"^(?:https?://)?(?:www\.)?([^/]+)", url).group(1) if url else "unknown"
@@ -82,10 +72,20 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
 
         page = await context.new_page()
 
+        # Capture network requests
+        captured_requests = []
+        page.on("request", lambda req: captured_requests.append(req.url))
+
+        # Block unnecessary resources to speed up loading
+        await page.route("**/*", lambda route: route.abort() 
+            if route.request.resource_type in ["image", "media", "font"] 
+            else route.continue_())
+
         # Navigate to URL
         logging.info(f"Auditing: {url}")
         try:
-            await page.goto(url, wait_until="load", timeout=90000)
+            # wait_until="domcontentloaded" is much faster than "load"
+            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         except PlaywrightTimeoutError:
             logging.warning(f"Page load timeout for {url}")
             audit_result.status = "error"
@@ -93,16 +93,15 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
             await context.close()
             return audit_result
 
-        # Simulate mouse movement and scroll (helps trigger lazy-loaded CMPs)
+        # Simulate mouse movement (helps trigger lazy-loaded CMPs)
         try:
             await page.mouse.move(100, 100)
             await page.mouse.move(200, 200)
-            await page.evaluate("window.scrollTo(0, document.body.scrollHeight / 4)")
         except:
             pass
 
-        # Wait for banner to appear
-        await page.wait_for_timeout(config.timeout_banner)
+        # Wait a short moment for JS execution
+        await page.wait_for_timeout(1000)
 
         # Get CMP configurations
         cmp_configs = get_consent_managers()
@@ -143,7 +142,9 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         # Attempt detailed extraction via UI navigation (best effort)
         settings_button = any(btn.role == "settings" for btn in banner_info.buttons)
 
-        if settings_button or banner_info.cmp_type:
+        settings_button = any(btn.role == "settings" for btn in banner_info.buttons)
+
+        if (settings_button or banner_info.cmp_type) and config.max_ui_depth > 0:
             logging.debug("Attempting detailed extraction via UI navigation...")
             try:
                 from consentcrawl.ui_explorer import attempt_detailed_extraction
@@ -181,6 +182,51 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
                 # Status remains success_basic
         else:
             logging.debug("No settings button found, skipping detailed extraction")
+
+        # Process captured requests
+        try:
+            # Filter third-party requests
+            third_party_requests = [
+                req_url for req_url in captured_requests 
+                if domain_name not in req_url
+            ]
+            
+            # Extract domains
+            third_party_domains = set()
+            for req_url in third_party_requests:
+                match = re.search(r"https?://(?:www\.)?([^/]+)", req_url)
+                if match:
+                    third_party_domains.add(match.group(1))
+            
+            audit_result.third_party_domains = list(third_party_domains)
+            
+            # Identify tracking domains
+            audit_result.tracking_domains = [
+                d for d in third_party_domains 
+                if any(tracker in d for tracker in TRACKING_DOMAINS)
+            ]
+            # Note: The original logic checked if "tracker in d". 
+            # If TRACKING_DOMAINS contains "google-analytics.com", and d is "www.google-analytics.com", it matches.
+            # But if TRACKING_DOMAINS contains "google-analytics", it matches too.
+            # Blocklists usually have "||example.com^". The parser in blocklists.py cleans this up.
+            # Let's assume TRACKING_DOMAINS contains clean domains.
+            
+            # Better matching logic: check if d ends with any tracking domain
+            # Or exact match if blocklist is precise.
+            # For now, simple inclusion is safer.
+            
+            logging.info(f"Found {len(audit_result.third_party_domains)} third-party domains and {len(audit_result.tracking_domains)} trackers")
+
+        except Exception as e:
+            logging.warning(f"Failed to process network requests: {e}")
+
+        # Extract actual cookies from browser context
+        try:
+            cookies = await context.cookies()
+            audit_result.actual_cookies = cookies
+            logging.info(f"Extracted {len(cookies)} actual cookies from browser")
+        except Exception as e:
+            logging.warning(f"Failed to extract actual cookies: {e}")
 
         # Close context
         await context.close()

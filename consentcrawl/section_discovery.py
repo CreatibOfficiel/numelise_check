@@ -28,6 +28,7 @@ import os
 import time
 import re
 import yaml
+import asyncio
 from typing import List, Optional, Dict, Any
 from playwright.async_api import Page, Locator, TimeoutError as PlaywrightTimeoutError
 
@@ -310,69 +311,84 @@ class SectionDiscoverer:
         try:
             logging.info("[SectionDiscovery] Starting 3-tier discovery")
 
-            # Step 1: Run all 3 discovery tiers
-            tier1_sections = await self.discover_tier1_aria()
+            # Step 1: Run all 3 discovery tiers in parallel
+            tier1_task = asyncio.create_task(self.discover_tier1_aria())
+            tier2_task = asyncio.create_task(self.discover_tier2_visual())
+            tier3_task = asyncio.create_task(self.discover_tier3_yaml())
+
+            tier1_sections, tier2_sections, tier3_sections = await asyncio.gather(
+                tier1_task, tier2_task, tier3_task
+            )
+
             logging.info(f"[Tier1-ARIA] Found {len(tier1_sections)} sections")
-            for section in tier1_sections:
-                logging.debug(
-                    f"  - {section.content_type.value}: {section.section_type.value}, "
-                    f"confidence={section.confidence:.2f}"
-                )
-
-            tier2_sections = await self.discover_tier2_visual()
             logging.info(f"[Tier2-Visual] Found {len(tier2_sections)} sections")
-            for section in tier2_sections:
-                logging.debug(
-                    f"  - {section.content_type.value}: {section.section_type.value}, "
-                    f"confidence={section.confidence:.2f}"
-                )
-
-            tier3_sections = await self.discover_tier3_yaml()
             logging.info(f"[Tier3-YAML] Found {len(tier3_sections)} sections")
-            for section in tier3_sections:
-                logging.debug(
-                    f"  - {section.content_type.value}: {section.section_type.value}, "
-                    f"confidence={section.confidence:.2f}"
-                )
 
             # Step 2: Merge and deduplicate
             merged_sections = await self.merge_discoveries(tier1_sections, tier2_sections, tier3_sections)
             logging.info(f"[Merge] After deduplication: {len(merged_sections)} unique sections")
 
-            # Step 3: Activate and validate each section
+        # Step 3: Activate and validate each section (Smart Strategy)
+            # Step 3: Activate and validate each section (Smart Strategy)
             logging.info("[Activation] Starting section activation and validation")
+            
+            # Group by content type
+            sections_by_type = {}
             for section in merged_sections:
-                try:
-                    if section.activation_required:
-                        success = await self.activate_and_validate_section(section)
-                        if not success:
-                            logging.warning(
-                                f"Section {section.content_type.value} activation/validation failed"
+                if section.content_type not in sections_by_type:
+                    sections_by_type[section.content_type] = []
+                sections_by_type[section.content_type].append(section)
+            
+            logging.info(f"[Activation] Processing types: {[t.value for t in sections_by_type.keys()]}")
+
+            # Process each type, starting with highest confidence
+            for content_type, sections in sections_by_type.items():
+                logging.info(f"[Activation] Processing type: {content_type.value} ({len(sections)} candidates)")
+                
+                # Sort by confidence descending
+                sections.sort(key=lambda s: s.confidence, reverse=True)
+                
+                type_success = False
+                for i, section in enumerate(sections):
+                    logging.info(f"[Activation] Candidate {i+1}/{len(sections)} for {content_type.value}")
+                    
+                    if type_success: 
+                        logging.info(f"[Activation] Skipping candidate {i+1} (already found {content_type.value})")
+                        break
+                        
+                    try:
+                        start_act = time.time()
+                        if section.activation_required:
+                            success = await self.activate_and_validate_section(section)
+                            if not success:
+                                logging.warning(
+                                    f"Section {section.content_type.value} activation/validation failed in {int((time.time()-start_act)*1000)}ms"
+                                )
+                                continue
+                        else:
+                            # Just validate (already visible)
+                            await self.validate_section_has_content(section)
+
+                        # Check for lazy loading if section has items
+                        if section.contains_items and section.content_type in [
+                            ContentType.VENDORS, ContentType.COOKIES
+                        ]:
+                            await self.handle_section_lazy_loading(section)
+
+                        # Log results
+                        if section.contains_items:
+                            logging.info(
+                                f"  ✓ {section.content_type.value}: "
+                                f"{section.item_count_after_activation} items found"
                             )
-                            continue
-                    else:
-                        # Just validate (already visible)
-                        await self.validate_section_has_content(section)
+                            type_success = True  # Mark as done for this type
+                        else:
+                            logging.warning(f"  ✗ {section.content_type.value}: no items found")
 
-                    # Check for lazy loading if section has items
-                    if section.contains_items and section.content_type in [
-                        ContentType.VENDORS, ContentType.COOKIES
-                    ]:
-                        await self.handle_section_lazy_loading(section)
-
-                    # Log results
-                    if section.contains_items:
-                        logging.info(
-                            f"  ✓ {section.content_type.value}: "
-                            f"{section.item_count_after_activation} items found"
-                        )
-                    else:
-                        logging.warning(f"  ✗ {section.content_type.value}: no items found")
-
-                except Exception as e:
-                    logging.error(f"Failed to activate/validate {section.content_type.value}: {e}")
-                    result.errors.append(f"{section.content_type.value}: {str(e)}")
-                    continue
+                    except Exception as e:
+                        logging.error(f"Failed to activate/validate {section.content_type.value}: {e}")
+                        result.errors.append(f"{section.content_type.value}: {str(e)}")
+                        continue
 
             # Step 4: Organize by content type
             for section in merged_sections:
@@ -680,7 +696,7 @@ class SectionDiscoverer:
                 'ul, ol, div[class*="list"], [role="list"]'
             ).all()
 
-            for container in containers[:10]:  # Limit to first 10 to avoid performance issues
+            for container in containers[:3]:  # Limit to first 3 to avoid performance issues
                 try:
                     # Get direct children
                     children = await container.locator('> *').all()
@@ -1039,15 +1055,12 @@ class SectionDiscoverer:
             logging.info(
                 f"Activating section: {section.content_type.value} via {section.activation_locator}"
             )
-            await button.click(timeout=3000)
+            await button.click(timeout=500, force=True)
             section.was_activated = True
 
             # Wait for content to appear (adaptive based on CMP)
-            wait_ms = 1000 if self.cmp_type in ["onetrust", "cookiebot"] else 1500
+            wait_ms = 500
             await self.page.wait_for_timeout(wait_ms)
-
-            # Wait for animations
-            await self.page.wait_for_timeout(500)
 
             # Validate content appeared
             has_content = await self.validate_section_has_content(section)
@@ -1087,18 +1100,22 @@ class SectionDiscoverer:
             True if section is active
         """
         try:
+            # Check if button is visible first
+            if not await button.is_visible(timeout=500):
+                return False
+
             # Check aria-selected (tabs)
-            aria_selected = await button.get_attribute("aria-selected")
+            aria_selected = await button.get_attribute("aria-selected", timeout=500)
             if aria_selected == "true":
                 return True
 
             # Check aria-expanded (accordions)
-            aria_expanded = await button.get_attribute("aria-expanded")
+            aria_expanded = await button.get_attribute("aria-expanded", timeout=500)
             if aria_expanded == "true":
                 return True
 
             # Check class patterns
-            classes = await button.get_attribute("class") or ""
+            classes = await button.get_attribute("class", timeout=500) or ""
             if any(c in classes for c in ["active", "selected", "current"]):
                 return True
 

@@ -555,17 +555,29 @@ async def extract_all_text_from_banner(banner_locator: Locator) -> str:
 
 
 def clean_text(text: Optional[str]) -> str:
-    """Clean text by removing HTML tags and normalizing whitespace."""
+    """Clean text by removing HTML tags and normalizing whitespace while preserving structure."""
     if not text:
         return ""
     import re
+    
+    # Replace block tags with newlines to preserve structure
+    text = re.sub(r'<(br|div|p|h\d|li|tr)[^>]*>', '\n', text, flags=re.IGNORECASE)
+    text = re.sub(r'</(div|p|h\d|li|tr)>', '\n', text, flags=re.IGNORECASE)
+    
     # Remove HTML tags
     text = re.sub(r'<[^>]+>', ' ', text)
+    
     # Remove CSS styles in text (rare but happens)
     text = re.sub(r'{[^}]+}', '', text)
-    # Normalize whitespace
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+    
+    # Normalize whitespace: replace multiple spaces with single space, but preserve newlines
+    lines = []
+    for line in text.split('\n'):
+        clean_line = re.sub(r'\s+', ' ', line).strip()
+        if clean_line:
+            lines.append(clean_line)
+            
+    return '\n'.join(lines)
 
 
 async def extract_banner_info_safe(banner_locator: Locator, cmp_info: Optional[dict], detection_method: str) -> Optional[BannerInfo]:
