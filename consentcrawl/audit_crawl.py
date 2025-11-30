@@ -73,6 +73,7 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         context = await browser.new_context(
             user_agent=DEFAULT_UA_STRINGS[0],
             viewport={"width": 1366, "height": 768},
+            ignore_https_errors=True,
         )
         logging.debug(f"Context created: {time.time() - start_time:.2f}s")
 
@@ -118,8 +119,8 @@ async def audit_url(url: str, browser, config: AuditConfig, screenshot: bool = F
         except:
             pass
 
-        # Wait a short moment for JS execution
-        await page.wait_for_timeout(1000)
+        # Wait for JS execution and CMP loading (increased for slow CMPs like Orejime)
+        await page.wait_for_timeout(3000)
 
         # Get CMP configurations
         cmp_configs = get_consent_managers()

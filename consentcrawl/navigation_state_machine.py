@@ -80,6 +80,8 @@ class AdaptiveWaiter:
         "sourcepoint": {"modal_open": 1500, "animation": 1200, "lazy_load": 1000},
         "quantcast": {"modal_open": 1500, "animation": 1000, "lazy_load": 1000},
         "usercentrics": {"modal_open": 1800, "animation": 1200, "lazy_load": 1000},
+        "sfbx": {"modal_open": 3000, "animation": 3000, "lazy_load": 2000},
+        "sfbx-io": {"modal_open": 3000, "animation": 3000, "lazy_load": 2000},
     }
 
     DEFAULT_TIMEOUTS = {"modal_open": 3000, "animation": 1500, "lazy_load": 1000}
@@ -183,10 +185,14 @@ class NavigationStateMachine:
 
         # Handle iframe context if banner is in iframe
         self.page_context = page
-        if banner_info.in_iframe and banner_info.iframe_src:
+        # Check if banner is in iframe (either by src or by flag)
+        if banner_info.in_iframe:
             logging.info(f"Banner is in iframe, will search within iframe context")
             # Note: We'll need to get the frame_locator when clicking
             self.iframe_selector = self._guess_iframe_selector(banner_info)
+            if not self.iframe_selector and banner_info.iframe_src:
+                # Fallback to src if no selector guessed
+                logging.debug("No iframe selector guessed, relying on src if needed")
         else:
             self.iframe_selector = None
 
@@ -197,6 +203,8 @@ class NavigationStateMachine:
             "sourcepoint": "[id*='sp_message_iframe']",
             "trustarc": "#truste_cm_frame",
             "onetrust": "#onetrust-consent-sdk iframe",
+            "sfbx": "#appconsent > iframe",
+            "sfbx-io": "#appconsent > iframe",
         }
         cmp_key = banner_info.cmp_type.replace("-cmp", "") if banner_info.cmp_type else None
         return iframe_selectors.get(cmp_key) or iframe_selectors.get(banner_info.cmp_type)
@@ -256,6 +264,14 @@ class NavigationStateMachine:
             if btn.role == "settings":
                 settings_button = btn
                 break
+        
+        # Fallback: check for 'info' buttons that might be settings (common in Sourcepoint)
+        if not settings_button:
+            for btn in self.banner_info.buttons:
+                if btn.role == "info":
+                    logging.info(f"Using 'info' button as fallback for settings: {btn.text}")
+                    settings_button = btn
+                    break
 
         if not settings_button:
             self.report.add_error("No settings button found in banner")
@@ -460,15 +476,16 @@ class NavigationStateMachine:
             Modal locator if detected, None otherwise
         """
         # Import here to avoid circular dependency
-        from consentcrawl.ui_explorer import detect_modal
+        from consentcrawl.ui_explorer import detect_modal_with_retry
 
         logging.info(f"[ModalDetection] Starting modal detection for CMP: {self.banner_info.cmp_type}")
 
         max_retries = 2
         for attempt in range(max_retries):
             try:
-                logging.debug(f"[ModalDetection] Attempt {attempt + 1}/{max_retries} - calling detect_modal()")
-                modal = await detect_modal(self.page, self.banner_info.cmp_type, self.config)
+                logging.debug(f"[ModalDetection] Attempt {attempt + 1}/{max_retries} - calling detect_modal_with_retry()")
+                # Use enhanced detection with CMP-specific logic
+                modal = await detect_modal_with_retry(self.page, self.banner_info.cmp_type, self.config, max_retries=1)
 
                 if modal:
                     logging.info(f"[ModalDetection] ✓ Modal detected on attempt {attempt + 1}/{max_retries}")
@@ -514,7 +531,7 @@ class NavigationStateMachine:
 
         try:
             # Check 1: Modal is visible
-            is_visible = await modal_locator.is_visible(timeout=1000)
+            is_visible = await modal_locator.is_visible(timeout=self.waiter.get_readiness_timeout())
             if not is_visible:
                 logging.debug("Modal readiness check failed: not visible")
                 return False
@@ -533,7 +550,7 @@ class NavigationStateMachine:
             await self.waiter.wait_for_animation_complete(self.page)
 
             # Check 4: Re-validate visibility after animations
-            is_still_visible = await modal_locator.is_visible(timeout=1000)
+            is_still_visible = await modal_locator.is_visible(timeout=self.waiter.get_readiness_timeout())
             if not is_still_visible:
                 logging.debug("Modal readiness check failed: disappeared after animation wait")
                 return False

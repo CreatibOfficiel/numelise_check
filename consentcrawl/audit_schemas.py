@@ -170,6 +170,7 @@ class DiscoveryMethod(Enum):
     ARIA_SEMANTIC = "aria_semantic"
     VISUAL_PATTERN = "visual_pattern"
     YAML_FALLBACK = "yaml_fallback"
+    CMP_SPECIFIC = "cmp_specific"
     HYBRID = "hybrid"
 
 
@@ -177,14 +178,16 @@ class DiscoveryMethod(Enum):
 
 @dataclass
 class DiscoveredSection:
-    """Discovered UI section (tab, accordion, list)."""
+    """A section discovered within a CMP modal."""
     section_type: SectionType
     content_type: ContentType
-    locator: Optional[str]
+    locator: Optional[str] # Changed from Optional[str] to str in user's snippet, but keeping Optional[str] to avoid breaking existing code if not intended.
     activation_required: bool
-    activation_locator: Optional[str]
     discovery_method: DiscoveryMethod
     confidence: float
+    activation_locator: Optional[str] = None # Changed from Optional[str] to Optional[Union[str, Locator]] in user's snippet, but keeping Optional[str] to avoid breaking existing code if not intended.
+    selector: Optional[str] = None
+    iframe_url: Optional[str] = None # URL of the iframe if section is inside
     was_activated: bool = False
     item_count_after_activation: int = 0
     contains_items: bool = False

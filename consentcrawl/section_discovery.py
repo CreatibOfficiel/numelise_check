@@ -985,6 +985,7 @@ class SectionDiscoverer:
 
                 # From each group, keep highest confidence
                 method_priority = {
+                    DiscoveryMethod.CMP_SPECIFIC: 4,
                     DiscoveryMethod.ARIA_SEMANTIC: 3,
                     DiscoveryMethod.VISUAL_PATTERN: 2,
                     DiscoveryMethod.YAML_FALLBACK: 1

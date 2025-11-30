@@ -12,13 +12,15 @@ Supports 35+ CMP types with generic fallbacks.
 import logging
 import os
 import yaml
+import re
 from typing import List, Optional, Dict, Any
 from playwright.async_api import Page, Locator, TimeoutError as PlaywrightTimeoutError
 
 from consentcrawl.audit_schemas import (
     BannerInfo, ButtonInfo, CategoryInfo, VendorInfo,
     CookieDetail, ConsentUIContext, AuditConfig,
-    DiscoveredSection, SectionDiscoveryResult
+    DiscoveredSection, SectionDiscoveryResult, DiscoveryMethod,
+    SectionType, ContentType
 )
 
 
@@ -118,33 +120,122 @@ async def open_settings_modal(page: Page, banner_info: BannerInfo, config: Audit
 
     if not settings_button:
         logging.warning("No settings button found in banner")
+        
+        # Didomi-specific fallback: try to find settings button directly
+        if banner_info.cmp_type and "didomi" in banner_info.cmp_type.lower():
+            logging.info("🔍 Didomi: Trying fallback settings button detection")
+            
+            didomi_settings_selectors = [
+                "button:has-text('Paramétrer')",
+                "button:has-text('Manage')",
+                "button:has-text('En savoir plus')",
+                "[class*='learn-more']",
+                ".didomi-components-button:has-text('Paramétrer')"
+            ]
+            
+            for selector in didomi_settings_selectors:
+                try:
+                    locator = page.locator(selector).first
+                    if await locator.is_visible(timeout=500):
+                        logging.info(f"✓ Didomi settings button found via fallback: {selector}")
+                        # Create a fake button object
+                        from consentcrawl.audit_schemas import Button
+                        settings_button = Button(
+                            text="Paramétrer",
+                            role="settings",
+                            selector=selector
+                        )
+                        break
+                except:
+                    continue
+        
+    if not settings_button:
         return None
+
+    # Determine context (main page or iframe)
+    context = page
+    logging.info(f"DEBUG: open_settings_modal - cmp_type: {banner_info.cmp_type}, in_iframe: {banner_info.in_iframe}, iframe_src: {banner_info.iframe_src}")
+    if banner_info.in_iframe:
+        logging.info("Banner is in iframe, attempting to switch context")
+        iframe_found = False
+        
+        # Try to find by src if available
+        if banner_info.iframe_src:
+            for frame in page.frames:
+                if banner_info.iframe_src in frame.url:
+                    context = frame
+                    iframe_found = True
+                    logging.info(f"✓ Found iframe by URL: {frame.url}")
+                    break
+        
+        # Fallback: try to find by CMP-specific selectors if not found
+        if not iframe_found and banner_info.cmp_type:
+            if "sourcepoint" in banner_info.cmp_type.lower():
+                for frame in page.frames:
+                    if "sp_message_iframe" in frame.name or "privacy-mgmt" in frame.url:
+                        context = frame
+                        iframe_found = True
+                        logging.info(f"✓ Found Sourcepoint iframe: {frame.url}")
+                        break
+            elif "onetrust" in banner_info.cmp_type.lower():
+                for frame in page.frames:
+                    if "onetrust" in frame.url or "ot-pc-content" in await frame.content():
+                        context = frame
+                        iframe_found = True
+                        logging.info(f"✓ Found OneTrust iframe: {frame.url}")
+                        break
+            elif "sfbx" in banner_info.cmp_type.lower():
+                # SFBX uses srcdoc, so we need to find it by selector
+                try:
+                    logging.info("Attempting to find SFBX iframe by selector #appconsent > iframe")
+                    iframe_locator = page.locator("#appconsent > iframe").first
+                    if await iframe_locator.count() > 0:
+                        logging.info("SFBX iframe locator found")
+                        element_handle = await iframe_locator.element_handle()
+                        if element_handle:
+                            logging.info("SFBX iframe element handle obtained")
+                            frame = await element_handle.content_frame()
+                            if frame:
+                                context = frame
+                                iframe_found = True
+                                logging.info("✓ Found SFBX iframe via selector and switched context")
+                            else:
+                                logging.warning("SFBX iframe content_frame() returned None")
+                        else:
+                            logging.warning("SFBX iframe element_handle() returned None")
+                    else:
+                        logging.warning("SFBX iframe locator count is 0")
+                except Exception as e:
+                    logging.error(f"Error finding SFBX iframe: {e}", exc_info=True)
+
+        if not iframe_found:
+            logging.warning("Could not find banner iframe, trying main page")
 
     # 2. Tentatives de clic avec différentes stratégies
     click_strategies = [
         {
             'name': 'extracted_selector',
-            'locator': lambda: page.locator(settings_button.selector).first,
+            'locator': lambda: context.locator(settings_button.selector).first,
             'enabled': bool(settings_button.selector)
         },
         {
             'name': 'aria_label',
-            'locator': lambda: page.locator(f"[aria-label='{settings_button.aria_label}']").first,
+            'locator': lambda: context.locator(f"[aria-label='{settings_button.aria_label}']").first,
             'enabled': bool(settings_button.aria_label)
         },
         {
             'name': 'button_text',
-            'locator': lambda: page.locator(f"button:has-text('{settings_button.text}')").first,
+            'locator': lambda: context.locator(f"button:has-text('{settings_button.text}')").first,
             'enabled': bool(settings_button.text)
         },
         {
             'name': 'role_button_text',
-            'locator': lambda: page.locator(f"[role='button']:has-text('{settings_button.text}')").first,
+            'locator': lambda: context.locator(f"[role='button']:has-text('{settings_button.text}')").first,
             'enabled': bool(settings_button.text)
         },
         {
             'name': 'any_clickable_text',
-            'locator': lambda: page.locator(f":has-text('{settings_button.text}')").first,
+            'locator': lambda: context.locator(f":has-text('{settings_button.text}')").first,
             'enabled': bool(settings_button.text)
         }
     ]
@@ -191,13 +282,55 @@ async def open_settings_modal(page: Page, banner_info: BannerInfo, config: Audit
         return None
 
     # 3. Attendre animation UI
-    await page.wait_for_timeout(500)
+    await page.wait_for_timeout(2000)
 
-    # 4. Détecter la modal avec retry (optimized to 2 for balance)
-    modal_locator = await detect_modal_with_retry(page, banner_info.cmp_type, config, max_retries=2)
+    # 4. CMP-specific modal detection (NEW - for Didomi preferences modal)
+    modal_locator = None
+    
+    if banner_info.cmp_type and "didomi" in banner_info.cmp_type.lower():
+        # Didomi has TWO modals: notice and preferences
+        # After clicking settings, we need to find the preferences modal specifically
+        logging.info("🔍 Didomi detected - looking for preferences modal")
+        
+        preferences_selectors = [
+            ".didomi-consent-popup-preferences",
+            "[class*='preferences']",
+            ".didomi-popup-preferences"
+        ]
+        
+        for selector in preferences_selectors:
+            try:
+                locator = page.locator(selector).first
+                count = await page.locator(selector).count()
+                logging.info(f"   Trying {selector}: {count} elements found")
+                
+                if await locator.is_visible(timeout=2000):
+                    logging.info(f"✓✓ Didomi preferences modal FOUND and VISIBLE: {selector}")
+                    modal_locator = locator
+                    break
+                else:
+                    logging.info(f"   {selector}: Found but not visible")
+            except Exception as e:
+                logging.info(f"   {selector}: Error - {str(e)[:50]}")
+                continue
+        
+        if not modal_locator:
+            logging.warning("⚠️  Didomi preferences modal NOT found, falling back to generic detection")
+    
+    # 5. Fallback to generic modal detection if CMP-specific failed
+    if not modal_locator:
+        logging.info("Using generic modal detection")
+        modal_locator = await detect_modal_with_retry(page, banner_info.cmp_type, config, max_retries=2)
 
     if not modal_locator:
         logging.warning("Settings modal not detected after click")
+    else:
+        # Log which modal was found
+        try:
+            modal_html = await modal_locator.evaluate("el => el.className")
+            logging.info(f"📍 Modal detected with class: {modal_html}")
+        except:
+            pass
 
     return modal_locator
 
@@ -224,6 +357,9 @@ async def detect_modal_with_retry(page: Page, cmp_type: Optional[str], config: A
         detect_sourcepoint_modal,
         detect_onetrust_modal,
         detect_didomi_modal,
+        detect_orejime_modal,
+        detect_trust_commander_modal,
+        detect_sfbx_modal,
         detect_modal_in_all_frames
     )
     
@@ -254,6 +390,27 @@ async def detect_modal_with_retry(page: Page, cmp_type: Optional[str], config: A
                     modal = await detect_didomi_modal(page)
                     if modal:
                         logging.info("✓ Modal found via Didomi detector")
+                        return modal
+                
+                elif "orejime" in normalized_cmp:
+                    logging.debug("Trying Orejime-specific detection")
+                    modal = await detect_orejime_modal(page)
+                    if modal:
+                        logging.info("✓ Modal found via Orejime detector")
+                        return modal
+                
+                elif "trust" in normalized_cmp or "commander" in normalized_cmp:
+                    logging.debug("Trying Trust Commander-specific detection")
+                    modal = await detect_trust_commander_modal(page)
+                    if modal:
+                        logging.info("✓ Modal found via Trust Commander detector")
+                        return modal
+                
+                elif "sfbx" in normalized_cmp:
+                    logging.debug("Trying SFBX-specific detection")
+                    modal = await detect_sfbx_modal(page)
+                    if modal:
+                        logging.info("✓ Modal found via SFBX detector")
                         return modal
             
             # Strategy 2: Generic detection (original logic)
@@ -1030,6 +1187,190 @@ async def extract_categories_from_discovery(
     categories = []
 
     try:
+        # Special handling for CMP-specific discovery
+        if section.discovery_method == DiscoveryMethod.CMP_SPECIFIC:
+            logging.info(f"Using CMP-specific extraction for {cmp_type}")
+            try:
+                # Check if section is in an iframe
+                search_context = modal_locator
+                if section.iframe_url:
+                    logging.info(f"Section is in iframe: {section.iframe_url}")
+                    # Find the iframe and switch context
+                    frames = page.frames
+                    iframe = next((f for f in frames if section.iframe_url in f.url), None)
+                    if iframe:
+                        logging.info(f"Switched to iframe context: {iframe.url}")
+                        search_context = iframe.locator("body")
+                    else:
+                        logging.warning(f"Could not find iframe with URL: {section.iframe_url}")
+                
+                items = []
+                # Didomi: locator points to items (SectionType.LIST)
+                if section.section_type == SectionType.LIST:
+                    items = await search_context.locator(section.locator).all()
+                
+                # Sourcepoint: locator points to tab (SectionType.TAB), need to find items
+                elif "sourcepoint" in (cmp_type or ""):
+                    # Sourcepoint items often share the same class as the tab but are in a list
+                    # Try common Sourcepoint item selectors
+                    sp_selectors = [
+                        ".tcfv2-stack", # Common SP stack structure
+                        ".stack-row",   # Inner row of stack
+                        "[class*='message-component'] input[type='checkbox']", # Items with checkboxes
+                        "[class*='sp_choice_type_']", # Generic SP elements
+                        ".message-component",
+                    ]
+                    
+                    for selector in sp_selectors:
+                        candidates = await search_context.locator(selector).all()
+                        # Filter out the tab itself if caught
+                        candidates = [c for c in candidates if await c.is_visible()]
+                        
+                        # If we found checkboxes, get their parent containers
+                        if "checkbox" in selector and candidates:
+                             items = [await c.locator("xpath=./../..").first for c in candidates] # Go up to container
+                             if items: break
+                        
+                        if candidates and len(candidates) > 1:
+                            items = candidates
+                            break
+                
+                # OneTrust: locator points to tab (SectionType.TAB), need to find items
+                elif "onetrust" in (cmp_type or ""):
+                    # OneTrust items are usually in a list container
+                    ot_selectors = [
+                        ".ot-sdk-row", # Common row class
+                        ".category-item",
+                        "h3[id*='ot-header']", # Headers often represent categories
+                    ]
+                    
+                    for selector in ot_selectors:
+                        candidates = await search_context.locator(selector).all()
+                        candidates = [c for c in candidates if await c.is_visible()]
+                        
+                        if candidates and len(candidates) > 1:
+                            items = candidates
+                            break
+                
+                # Orejime: locator points to list items (.orejime-AppList-item)
+                elif "orejime" in (cmp_type or ""):
+                    # Orejime has a simple structure - items are already the right locator
+                    # Just verify they're visible
+                    candidates = await search_context.locator(section.locator).all()
+                    candidates = [c for c in candidates if await c.is_visible()]
+                    
+                    if candidates:
+                        items = candidates
+                        logging.info(f"Found {len(items)} Orejime app items")
+                
+                # Trust Commander: locator points to .vendor elements
+                elif "trust" in (cmp_type or "") or "commander" in (cmp_type or ""):
+                    # Trust Commander has .vendor elements with .tc-title inside
+                    candidates = await modal_locator.locator(section.locator).all()
+                    candidates = [c for c in candidates if await c.is_visible()]
+                    
+                    if candidates:
+                        items = candidates
+                        logging.info(f"Found {len(items)} Trust Commander items")
+                
+                # SFBX: locator points to vendors/purposes
+                elif "sfbx" in (cmp_type or ""):
+                    candidates = await modal_locator.locator(section.locator).all()
+                    candidates = [c for c in candidates if await c.is_visible()]
+                    
+                    if candidates:
+                        items = candidates
+                        logging.info(f"Found {len(items)} SFBX items")
+                            
+                logging.info(f"Found {len(items)} items using CMP-specific logic")
+                
+                for idx, item in enumerate(items):
+                    try:
+                        text = await item.inner_text(timeout=500)
+                        logging.info(f"Item {idx} text: {text[:50]}...")
+                        lines = [line.strip() for line in text.split('\n') if line.strip()]
+                        
+                        if not lines:
+                            logging.info(f"Item {idx} has no lines")
+                            continue
+                        
+                        # Orejime-specific: extract from .orejime-AppItem-title
+                        if "orejime" in (cmp_type or ""):
+                            try:
+                                title_elem = await item.locator(".orejime-AppItem-title").first
+                                name = await title_elem.inner_text(timeout=500)
+                                name = name.strip()
+                                
+                                # Try to get description
+                                try:
+                                    desc_elem = await item.locator(".orejime-AppItem-description").first
+                                    description = await desc_elem.inner_text(timeout=500)
+                                except:
+                                    description = None
+                            except:
+                                # Fallback to first line
+                                name = lines[0]
+                                description = lines[1] if len(lines) > 1 else None
+                        
+                        # Trust Commander-specific: extract from .tc-title
+                        elif "trust" in (cmp_type or "") or "commander" in (cmp_type or ""):
+                            try:
+                                title_elem = await item.locator(".tc-title").first
+                                name = await title_elem.inner_text(timeout=500)
+                                name = name.strip()
+                                description = None  # Trust Commander doesn't show descriptions in list
+                            except:
+                                # Fallback to first line
+                                name = lines[0]
+                                description = None
+                        
+                        # SFBX-specific: extract from title attribute or text
+                        elif "sfbx" in (cmp_type or ""):
+                            try:
+                                # Try title attribute first (seen in dump)
+                                title_attr = await item.get_attribute("title")
+                                if title_attr:
+                                    name = title_attr
+                                    description = None
+                                else:
+                                    # Fallback to text
+                                    text = await item.inner_text(timeout=500)
+                                    name = text.strip()
+                                    description = None
+                            except:
+                                name = lines[0]
+                                description = None
+                        
+                        else:
+                            name = lines[0]
+                            logging.info(f"Item {idx} name: {name}")
+                            description = lines[1] if len(lines) > 1 else None
+                        
+                        # Try to find toggle state if possible
+                        enabled = True
+                        try:
+                            # Check for checkbox/switch within item
+                            toggle = item.locator('input[type="checkbox"], [role="switch"]').first
+                            if await toggle.is_visible(timeout=100):
+                                enabled = await toggle.is_checked()
+                        except:
+                            pass
+                            
+                        categories.append(CategoryInfo(
+                            name=name,
+                            description=description,
+                            default_enabled=enabled
+                        ))
+                    except Exception as e:
+                        logging.debug(f"Error extracting item {idx}: {e}")
+                        continue
+                
+                if categories:
+                    logging.info(f"Successfully extracted {len(categories)} categories via CMP-specific logic")
+                    return categories
+            except Exception as e:
+                logging.warning(f"CMP-specific extraction failed: {e}, falling back to generic")
+
         # Find container
         if section.locator:
             container = modal_locator.locator(section.locator).first
@@ -1181,6 +1522,110 @@ async def extract_vendors_from_discovery(
     vendors = []
 
     try:
+        # Special handling for CMP-specific discovery
+        if section.discovery_method == DiscoveryMethod.CMP_SPECIFIC:
+            logging.info(f"Using CMP-specific vendor extraction for {cmp_type}")
+            try:
+                # Check if section is in an iframe
+                search_context = modal_locator
+                if section.iframe_url:
+                    logging.info(f"Vendor section is in iframe: {section.iframe_url}")
+                    # Find the iframe and switch context
+                    frames = page.frames
+                    iframe = next((f for f in frames if section.iframe_url in f.url), None)
+                    if iframe:
+                        logging.info(f"Switched to iframe context for vendors: {iframe.url}")
+                        search_context = iframe.locator("body")
+                    else:
+                        logging.warning(f"Could not find iframe with URL: {section.iframe_url}")
+                
+                items = []
+                # Didomi: locator points to items (SectionType.LIST)
+                if section.section_type == SectionType.LIST:
+                    items = await search_context.locator(section.locator).all()
+                
+                # Sourcepoint: locator points to tab (SectionType.TAB), need to find items
+                elif "sourcepoint" in (cmp_type or ""):
+                    # Sourcepoint items often share the same class as the tab but are in a list
+                    # Try common Sourcepoint item selectors
+                    sp_selectors = [
+                        "[class*='message-component'] input[type='checkbox']", # Items with checkboxes
+                        "[class*='sp_choice_type_']", # Generic SP elements
+                        ".message-component",
+                    ]
+                    
+                    for selector in sp_selectors:
+                        candidates = await search_context.locator(selector).all()
+                        # Filter out the tab itself if caught
+                        candidates = [c for c in candidates if await c.is_visible()]
+                        
+                        # If we found checkboxes, get their parent containers
+                        if "checkbox" in selector and candidates:
+                             items = [await c.locator("xpath=./../..").first for c in candidates] # Go up to container
+                             if items: break
+                        
+                        if candidates and len(candidates) > 1:
+                            items = candidates
+                            break
+                
+                # OneTrust: locator points to tab (SectionType.TAB), need to find items
+                elif "onetrust" in (cmp_type or ""):
+                    ot_selectors = [
+                        ".ot-vnd-item",
+                        ".ot-vs-list .ot-vnd-item",
+                        ".ot-vnd-info",
+                        "#ot-pc-lst .ot-acc-hdr" # Sometimes vendors are in accordions
+                    ]
+                    
+                    for selector in ot_selectors:
+                        candidates = await search_context.locator(selector).all()
+                        candidates = [c for c in candidates if await c.is_visible()]
+                        
+                        if candidates and len(candidates) > 1:
+                            items = candidates
+                            break
+                            
+                # SFBX: items are .consentableItem
+                elif "sfbx" in (cmp_type or ""):
+                    items = await modal_locator.locator(".consentableItem").all()
+                    logging.info(f"Found {len(items)} SFBX vendor items")
+                            
+                logging.info(f"Found {len(items)} items using CMP-specific logic")
+                
+                for idx, item in enumerate(items[:500]):  # Limit to 500
+                    try:
+                        text = await item.inner_text(timeout=500)
+                        lines = [line.strip() for line in text.split('\n') if line.strip()]
+                        
+                        if not lines:
+                            continue
+                            
+                        name = lines[0]
+                        
+                        # Extract privacy policy URL if available
+                        privacy_policy_url = None
+                        try:
+                            privacy_links = await item.locator('a[href*="privacy"], a[href*="politique"]').all()
+                            if privacy_links:
+                                privacy_policy_url = await privacy_links[0].get_attribute("href", timeout=500)
+                        except:
+                            pass
+                            
+                        vendors.append(VendorInfo(
+                            name=name,
+                            purposes=[],  # Hard to extract purposes from list item text usually
+                            privacy_policy_url=privacy_policy_url
+                        ))
+                    except Exception as e:
+                        logging.debug(f"Error extracting vendor item {idx}: {e}")
+                        continue
+                
+                if vendors:
+                    logging.info(f"Successfully extracted {len(vendors)} vendors via CMP-specific logic")
+                    return vendors
+            except Exception as e:
+                logging.warning(f"CMP-specific vendor extraction failed: {e}, falling back to generic")
+
         # Find container
         if section.locator:
             container = modal_locator.locator(section.locator).first

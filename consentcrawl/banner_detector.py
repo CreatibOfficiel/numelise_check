@@ -19,6 +19,15 @@ from typing import Optional, Tuple, List
 from playwright.async_api import Page, Locator, Frame, TimeoutError as PlaywrightTimeoutError
 
 from consentcrawl.audit_schemas import BannerInfo, ButtonInfo, AuditConfig
+from consentcrawl.cmp_detectors import (
+    detect_sourcepoint_modal,
+    detect_onetrust_modal,
+    detect_didomi_modal,
+    detect_orejime_modal,
+    detect_trust_commander_modal,
+    detect_sfbx_modal,
+    detect_lemonde_wall
+)
 
 
 MODULE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -167,7 +176,209 @@ async def detect_banner(page: Page, cmp_configs: List[dict], config: AuditConfig
     Returns:
         BannerInfo object if detected, None otherwise
     """
-    # Strategy 1: CMP-specific detection
+    # 0. Try Hardcoded CMP detectors (Python functions)
+    # These are for complex CMPs that require specific logic not expressible in YAML
+    detectors = [
+        ("sourcepoint", detect_sourcepoint_modal),
+        ("onetrust", detect_onetrust_modal),
+        ("didomi", detect_didomi_modal),
+        ("orejime", detect_orejime_modal),
+        ("trust_commander", detect_trust_commander_modal),
+        ("sfbx", detect_sfbx_modal),
+        ("lemonde", detect_lemonde_wall),
+    ]
+
+    for cmp_name, detector_func in detectors:
+        try:
+            modal = await detector_func(page)
+            if modal:
+                logging.info(f"Banner detected using hardcoded detector: {cmp_name}")
+                
+                buttons = []
+                if cmp_name == "lemonde":
+                    # Extract Le Monde buttons
+                    try:
+                        accept_btn = modal.locator("button[data-gdpr-expression='acceptAll']")
+                        if await accept_btn.count() > 0:
+                            buttons.append(ButtonInfo(
+                                text="Accéder gratuitement",
+                                role="accept_all",
+                                selector="button[data-gdpr-expression='acceptAll']",
+                                is_visible=True
+                            ))
+                        
+                        subscribe_btn = modal.locator(".js-gdpr-deny-subscribe")
+                        if await subscribe_btn.count() > 0:
+                            buttons.append(ButtonInfo(
+                                text="S'abonner",
+                                role="reject_all", # Effectively rejecting consent by paying
+                                selector=".js-gdpr-deny-subscribe",
+                                is_visible=True
+                            ))
+                    except Exception as e:
+                        logging.warning(f"Error extracting Le Monde buttons: {e}")
+
+                elif cmp_name == "onetrust":
+                    # Extract OneTrust buttons (Banner + Preference Center)
+                    try:
+                        # Accept All (Banner & PC)
+                        accept_selectors = [
+                            "#onetrust-accept-btn-handler",
+                            "#accept-recommended-btn-handler",
+                            ".save-preference-btn-handler" # Often "Save & Exit" acts as accept if all selected or default
+                        ]
+                        for sel in accept_selectors:
+                            btn = modal.locator(sel)
+                            if await btn.count() > 0 and await btn.first.is_visible():
+                                buttons.append(ButtonInfo(
+                                    text="Accept",
+                                    role="accept_all",
+                                    selector=sel,
+                                    is_visible=True
+                                ))
+                                break # Found one accept button
+
+                        # Reject All (Banner & PC)
+                        reject_selectors = [
+                            "#onetrust-reject-all-handler",
+                            ".ot-pc-refuse-all-handler"
+                        ]
+                        for sel in reject_selectors:
+                            btn = modal.locator(sel)
+                            if await btn.count() > 0 and await btn.first.is_visible():
+                                buttons.append(ButtonInfo(
+                                    text="Reject",
+                                    role="reject_all",
+                                    selector=sel,
+                                    is_visible=True
+                                ))
+                                break
+
+                        # Manage Preferences (Banner)
+                        manage_selectors = ["#onetrust-pc-btn-handler"]
+                        for sel in manage_selectors:
+                            btn = modal.locator(sel)
+                            if await btn.count() > 0 and await btn.first.is_visible():
+                                buttons.append(ButtonInfo(
+                                    text="Manage",
+                                    role="settings",
+                                    selector=sel,
+                                    is_visible=True
+                                ))
+                                break
+                    except Exception as e:
+                        logging.warning(f"Error extracting OneTrust buttons: {e}")
+
+                elif cmp_name == "trust_commander":
+                    # Extract Trust Commander buttons
+                    try:
+                        # Accept All
+                        accept_selectors = [
+                            "#footer_tc_privacy_button_2", # Cdiscount specific
+                            "#popin_tc_privacy_button_2", # Credit Agricole specific
+                            "[title='Accepter']",
+                            "[title='Accepter et fermer']",
+                            "button:has-text('Accepter'):not(:has-text('sans'))" # Avoid "Continuer sans accepter"
+                        ]
+                        for sel in accept_selectors:
+                            btn = modal.locator(sel)
+                            if await btn.count() > 0 and await btn.first.is_visible():
+                                buttons.append(ButtonInfo(
+                                    text="Accepter",
+                                    role="accept_all",
+                                    selector=sel,
+                                    is_visible=True
+                                ))
+                                break
+
+                        # Reject All
+                        reject_selectors = [
+                            "#footer_tc_privacy_button_3", # Cdiscount specific
+                            "#popin_tc_privacy_button_3", # Credit Agricole specific
+                            "[title='Continuer sans accepter']",
+                            "button:has-text('Continuer sans accepter')"
+                        ]
+                        for sel in reject_selectors:
+                            btn = modal.locator(sel)
+                            if await btn.count() > 0 and await btn.first.is_visible():
+                                buttons.append(ButtonInfo(
+                                    text="Continuer sans accepter",
+                                    role="reject_all",
+                                    selector=sel,
+                                    is_visible=True
+                                ))
+                                break
+
+                        # Settings
+                        settings_selectors = [
+                            "#footer_tc_privacy_button", # Cdiscount specific
+                            "#popin_tc_privacy_button", # Credit Agricole specific
+                            "[title='Paramétrer les cookies']",
+                            "[title='Personnaliser mes choix']",
+                            "button:has-text('Paramétrer')",
+                            "button:has-text('Personnaliser')"
+                        ]
+                        for sel in settings_selectors:
+                            btn = modal.locator(sel)
+                            if await btn.count() > 0 and await btn.first.is_visible():
+                                buttons.append(ButtonInfo(
+                                    text="Paramétrer",
+                                    role="settings",
+                                    selector=sel,
+                                    is_visible=True
+                                ))
+                                break
+
+                    except Exception as e:
+                        logging.warning(f"Error extracting Trust Commander buttons: {e}")
+
+                elif cmp_name == "orejime":
+                    # Extract Orejime buttons
+                    try:
+                        # Accept All
+                        accept_btn = modal.locator(".orejime-Button--save")
+                        if await accept_btn.count() > 0:
+                            buttons.append(ButtonInfo(
+                                text="Accepter",
+                                role="accept_all",
+                                selector=".orejime-Button--save",
+                                is_visible=True
+                            ))
+                        
+                        # Reject All
+                        reject_btn = modal.locator(".orejime-Button--decline")
+                        if await reject_btn.count() > 0:
+                            buttons.append(ButtonInfo(
+                                text="Refuser",
+                                role="reject_all",
+                                selector=".orejime-Button--decline",
+                                is_visible=True
+                            ))
+                            
+                        # Settings
+                        settings_btn = modal.locator(".orejime-Button--info")
+                        if await settings_btn.count() > 0:
+                            buttons.append(ButtonInfo(
+                                text="Personnaliser",
+                                role="settings",
+                                selector=".orejime-Button--info",
+                                is_visible=True
+                            ))
+                    except Exception as e:
+                        logging.warning(f"Error extracting Orejime buttons: {e}")
+
+                # Create BannerInfo directly
+                return BannerInfo(
+                    detected=True,
+                    cmp_type=cmp_name,
+                    detection_method="hardcoded_detector",
+                    in_iframe=False,
+                    buttons=buttons
+                )
+        except Exception as e:
+            logging.debug(f"Hardcoded detector {cmp_name} failed: {e}")
+
+    # Strategy 1: CMP-specific detection (YAML based)
     cmp_info, banner_locator, iframe_info = await detect_cmp_banner(page, cmp_configs)
     if cmp_info and banner_locator:
         banner_info = await extract_banner_info(banner_locator, cmp_info, "cmp_specific")
@@ -294,6 +505,25 @@ async def detect_generic_banner(page: Page, config: AuditConfig) -> Optional[Ban
     Returns:
         BannerInfo if detected, None otherwise
     """
+    # 1. Try CMP-specific detectors first (most reliable)
+    # Note: The user's instruction implies a 'detectors' list here, but the current
+    # detect_cmp_banner already handles CMP-specific detection via cmp_configs.
+    # If this list is intended for *additional* hardcoded CMP detectors not in cmp_configs,
+    # it should be placed in a logical spot, likely before the generic selectors.
+    # For now, I'm adding it as per the instruction's placement, assuming it's a new
+    # set of selectors/logic for generic detection that includes CMP-like patterns.
+    # This interpretation makes the most sense to maintain syntactical correctness
+    # while incorporating the user's explicit "Code Edit" content.
+    detectors = [
+        ("sourcepoint", detect_sourcepoint_modal),
+        ("onetrust", detect_onetrust_modal),
+        ("didomi", detect_didomi_modal),
+        ("orejime", detect_orejime_modal),
+        ("trust_commander", detect_trust_commander_modal),
+        ("sfbx", detect_sfbx_modal),
+        ("lemonde", detect_lemonde_wall),
+    ]
+
     selectors = [
         "[role='dialog']",
         "[aria-modal='true']",
@@ -879,7 +1109,7 @@ def classify_button_role(text: str, aria_label: str) -> str:
         "setting", "manage", "customize", "configure", "preference", "choice", "choose", "option",
         "paramétrer", "gérer", "personnaliser", "configurer", "préférence",
         "einstellung", "verwalten", "anpassen",
-        "configurar", "gestionar"
+        "configurar", "gestionar", "set up", "partners", "partenaires"
     ]
     if any(pattern in combined for pattern in settings_patterns):
         return "settings"
@@ -916,7 +1146,11 @@ async def search_in_iframes(page: Page, detector_func, max_depth: int = 2, curre
         return None
 
     try:
-        frames = page.frames
+        # Handle both Page and Frame objects
+        if hasattr(page, "frames"):
+            frames = page.frames
+        else:
+            frames = page.child_frames
         for frame in frames:
             # Skip the main frame
             if frame == page.main_frame:
