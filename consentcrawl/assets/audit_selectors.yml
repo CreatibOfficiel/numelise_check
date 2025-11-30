@@ -56,6 +56,12 @@ settings_buttons:
     - "[data-cky-tag='detail-button']"
     - "button:has-text('Customize')"
 
+  tarteaucitron:
+    - "#tarteaucitronManager"
+    - ".tarteaucitronManager"
+    - "button:has-text('Gestion des cookies')"
+    - "button:has-text('Personnaliser')"
+
   generic:
     - "[aria-label*='settings' i]"
     - "[aria-label*='manage' i]"
@@ -137,6 +143,11 @@ modals:
     - "[aria-label*='Manage']"
     - "div.message-component.categories"
     - "div[class*='sp_choice']"
+
+  tarteaucitron:
+    - "#tarteaucitronRoot"
+    - "#tarteaucitronBack"
+    - "#tarteaucitron"
 
 # Category patterns by CMP
 categories:
@@ -220,6 +231,13 @@ categories:
     name: "legend, label, .category-name, .option-label, strong, h3, h4"
     toggle: "input[type='checkbox'], [role='switch'], .toggle, button[aria-checked]"
     description: "p, .description, .info, span:not([class])"
+
+  tarteaucitron:
+    - container: "#tarteaucitronServices"
+    - item: ".tarteaucitronLine"
+    - name: ".tarteaucitronName"
+    - toggle: ".tarteaucitronAllow"
+    - description: ".tarteaucitronAsk"
 
 # Vendor patterns
 vendors:

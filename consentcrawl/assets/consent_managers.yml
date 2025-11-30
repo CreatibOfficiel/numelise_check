@@ -317,6 +317,17 @@
     - type: css-selector
       value: "button#ppms_cm_agree-to-all"
 
+- id: tarteaucitron
+  name: Tarteaucitron
+  brand: Tarteaucitron
+  actions:
+    - type: css-selector
+      value: "#tarteaucitronPersonalize2"
+    - type: css-selector
+      value: "#tarteaucitronAllDenied2"
+    - type: css-selector
+      value: "#tarteaucitronAlertBig button"
+
 - id: generic-custom
   name: Non Specific Implementation
   brand: Custom / Generic
@@ -363,3 +374,4 @@
         - "#cookiebanner button, [class*='cookie']"
         - "[class*='ookie'] button, [id*='ookie'] button"
         - "[data-tracking-name*='opt-in'], [data-tracking-name*='optin'], [data-tracking-name*='optIn']"
+
