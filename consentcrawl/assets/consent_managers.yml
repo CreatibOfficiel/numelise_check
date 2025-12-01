@@ -213,6 +213,14 @@
     - type: css-selector
       value: "#qc-cmp2-ui button[mode='primary']"
 
+- id: wp-complianz
+  name: Complianz - GDPR/CCPA Cookie Consent
+  url: complianz.io
+  brand: Really Simple Plugins
+  actions:
+    - type: css-selector
+      value: ".cmplz-accept"
+
 - id: didomi
   name: Didomi
   brand: Didomi
@@ -288,13 +296,7 @@
     - type: css-selector
       value: ".button__acceptAll"
 
-- id: wp-complianz
-  name: Complianz - GDPR/CCPA Cookie Consent
-  url: complianz.io
-  brand: Really Simple Plugins
-  actions:
-    - type: css-selector
-      value: ".cmplz-accept"
+
 
 - id: cookie-script
   name: Cookie Script

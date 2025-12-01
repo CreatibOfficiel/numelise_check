@@ -174,7 +174,6 @@ async def detect_didomi_modal(page: Page) -> Optional[Locator]:
         # Strategy 0: Check for preferences modal (Priority for UI exploration)
         preferences_selectors = [
             ".didomi-consent-popup-preferences",
-            "[class*='preferences']",
             ".didomi-popup-preferences"
         ]
         
